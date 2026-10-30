@@ -21,6 +21,8 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 - **Diálogos.** Atajos que solo insertan la raya: Alt + guion abre una línea de diálogo y Alt + I abre o cierra el inciso del narrador. «Revisar diálogos» (a pedido) señala espacios de más, rayas de cierre que faltan o sobran, puntuación del inciso y verbos en mayúscula, según las normas de la RAE.
 - **Modo lectura.** El proyecto como libro, a una o dos páginas, con animación suave al pasar página (se puede quitar). Se abre con Ctrl/⌘ + Shift + L; doble clic en un párrafo vuelve a editarlo.
 - **Notas.** Marcas propias, respuestas, correcciones aplicables, resueltas y cabos sueltos.
+- **Ideas.** Un cuaderno dentro de cada proyecto para notas sueltas, frases, imágenes y garabatos (con lápiz, colores y goma). Se clasifican solas (trama, personajes, lugares, mundo, temas, diálogos, por investigar), reconocen los nombres de la biblia y se pueden asignar a un capítulo, pasar a una ficha o a los cabos sueltos. Alt + N anota una idea desde cualquier parte.
+- **Estructura mientras escribes.** Huecos «por escribir» (Alt + H) para rellenar después, separadores de escena * * * (Alt + S) y saltos de página (Alt + Enter).
 - **Biblia.** Fichas por sección (personajes, lugares, mundo…), apariciones en el texto, cabos sueltos y decisiones.
 - **Diagramas.** Mapa de relaciones y línea de tiempo que compara el orden de la historia con el orden del relato. Se exportan en SVG y PNG.
 - **Historial.** Versiones automáticas y manuales por capítulo, comparación palabra por palabra y restauración.
@@ -41,6 +43,10 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 | Ctrl/⌘ + Shift + L | Leer como libro |
 | Alt + - (guion) | Diálogo: línea nueva con raya |
 | Alt + I | Diálogo: abre o cierra el inciso |
+| Alt + N | Anotar una idea |
+| Alt + H | Hueco por escribir |
+| Alt + S | Separador de escena |
+| Alt + Enter | Salto de página |
 | ? | Ayuda |
 
 ## Tus datos

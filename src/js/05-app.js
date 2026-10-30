@@ -81,7 +81,7 @@ const App = {
   go(hash) { if (location.hash.slice(1) === hash) this.route(); else location.hash = hash; },
   route() {
     const hs = (location.hash || '').slice(1);
-    const m = hs.match(/^p-([a-z0-9]+)(?:-(c)-([a-z0-9]+)|-(biblia|diagramas|estadisticas|ajustes))?$/);
+    const m = hs.match(/^p-([a-z0-9]+)(?:-(c)-([a-z0-9]+)|-(biblia|ideas|diagramas|estadisticas|ajustes))?$/);
     if (!m || !this.findProj(m[1])) { this.showHome(); return; }
     const pid = m[1];
     let tab = m[4] || 'escribir', cid = m[3] || null;
@@ -124,7 +124,7 @@ const App = {
     c.append(h('span', { class: 'sep', text: '/' }), h('button', { type: 'button', text: P.title, onclick: () => this.go('p-' + this.pid) }));
     let cur = null;
     if (this.tab === 'escribir' && this.cid) cur = this.chTitle(this.cid) || this.unit();
-    else cur = { biblia: 'Biblia', diagramas: 'Diagramas', estadisticas: 'Estadísticas', ajustes: 'Ajustes' }[this.tab];
+    else cur = { biblia: 'Biblia', ideas: 'Ideas', diagramas: 'Diagramas', estadisticas: 'Estadísticas', ajustes: 'Ajustes' }[this.tab];
     if (cur) c.append(h('span', { class: 'sep', text: '/' }), h('span', { class: 'cur', text: cur }));
   },
   renderSaveStatus() {
@@ -362,6 +362,8 @@ const App = {
         try { const vs = await RT.db.collection(base + '/chapters/' + c.id + '/versions').get(); for (const v of vs.docs) await RT.db.doc(base + '/chapters/' + c.id + '/versions/' + v.id).delete(); } catch (e) {}
         await RT.db.doc(base + '/chapters/' + c.id).delete();
       }
+      const ids = await RT.db.collection(base + '/ideas').get();
+      for (const c of ids.docs) await RT.db.doc(base + '/ideas/' + c.id).delete();
     } catch (e) {}
     await this.colls[space].remove(d.id);
     this.renderHomeSoon();
@@ -384,6 +386,7 @@ const App = {
     if (window.Editor) Editor.unmount();
     UI.closeDrawer(true);
     if (this.chapters) { this.chapters.close(); this.chapters = null; }
+    if (window.Ideas) Ideas.close();
     this.pid = null; this.cid = null;
   },
   onProjectDoc(sd, kind) {
@@ -486,6 +489,7 @@ const App = {
     };
     navItem('escribir', 'Escribir', 'pen', this.cid ? this.chHash(this.cid) : 'p-' + this.pid);
     navItem('biblia', 'Biblia', 'book', 'p-' + this.pid + '-biblia');
+    navItem('ideas', 'Ideas', 'idea', 'p-' + this.pid + '-ideas');
     navItem('diagramas', 'Diagramas', 'graph', 'p-' + this.pid + '-diagramas');
     navItem('estadisticas', 'Estadísticas', 'chart', 'p-' + this.pid + '-estadisticas');
     navItem('ajustes', 'Ajustes', 'gear', 'p-' + this.pid + '-ajustes');
@@ -557,6 +561,7 @@ const App = {
     } else {
       st.textContent = '';
       if (this.tab === 'biblia') Bible.render(st);
+      else if (this.tab === 'ideas') Ideas.render(st);
       else if (this.tab === 'diagramas') Diagrams.render(st);
       else if (this.tab === 'estadisticas') Stats.render(st);
       else if (this.tab === 'ajustes') this.renderSettings(st);
@@ -735,6 +740,10 @@ const App = {
       [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
+      [keys('alt', 'N'), 'Anotar una idea (va a «Ideas»)'],
+      [keys('alt', 'H'), 'Dejar un hueco «por escribir»'],
+      [keys('alt', 'S'), 'Separador de escena (* * *)'],
+      [keys('alt', 'enter'), 'Salto de página antes de este párrafo'],
       ['Seleccionar texto', RT.web ? 'Marcar a mano' : 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']

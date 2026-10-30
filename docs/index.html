@@ -766,6 +766,56 @@ body.reading{overflow:hidden}
 .rd-arrow.prev{left:4px}.rd-arrow.next{right:4px}
 @media (max-width:700px){.rd-zoom .rd-zl{min-width:2.6rem}.rd-zoom button{padding:.2rem .4rem}}
 
+/* ---------- estructura en el editor ---------- */
+.doc>p.sep{text-align:center;text-indent:0!important;letter-spacing:.6em;color:var(--soft);margin:1.1em 0}
+.doc .m.pend{background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px dashed var(--t-fg);border-radius:3px;padding:.05em .3em;font-style:italic;color:var(--soft)}
+.idea-badge{display:block;margin:-.2rem auto .6rem;border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:.22rem .7rem;font:500 .72rem var(--f-ui);cursor:pointer}
+.idea-badge:hover{background:var(--accent);color:var(--accent-ink)}
+
+/* ---------- ideas ---------- */
+.ideas{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:1rem}
+.idea-cap{display:flex;flex-direction:column;gap:.55rem;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.8rem;transition:border-color .15s,box-shadow .15s}
+.idea-cap textarea{resize:vertical;min-height:4.2rem;font:400 1rem/1.5 var(--f-text);border:0;background:transparent;padding:.2rem .1rem}
+.idea-cap textarea:focus{outline:none}
+.idea-cap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.idea-cap.drop{border-style:dashed;border-color:var(--accent);background:var(--accent-soft)}
+.idea-prev{display:flex;align-items:flex-end;gap:.5rem}
+.idea-prev img{max-height:110px;max-width:220px;border-radius:4px;border:1px solid var(--line)}
+.ideas-f{margin:0}
+.ideas-f .ig{font-size:.8rem;opacity:.8}
+.idea-q{width:min(14rem,100%);padding:.35rem .6rem;font-size:.85rem}
+.idea-chf{display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:var(--soft)}
+.idea-grid{columns:3 17rem;column-gap:.9rem}
+.idea{break-inside:avoid;margin:0 0 .9rem;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.75rem .85rem .6rem;position:relative;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.idea.pin{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.idea.done{opacity:.6}
+.idea img{display:block;width:100%;height:auto;border-radius:4px;margin:-.1rem 0 .55rem;cursor:zoom-in;background:#fff}
+.idea-t{margin:0 0 .55rem;font:400 .98rem/1.5 var(--f-text);white-space:pre-wrap;overflow-wrap:anywhere}
+.idea-m{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
+.idea-cat,.idea-ch,.idea-who{border:1px solid var(--line2);background:var(--bg);border-radius:999px;padding:.12rem .5rem;font-size:.72rem;color:var(--soft);cursor:pointer;display:inline-flex;gap:.3rem;align-items:center}
+.idea-cat{color:var(--ink)}
+.idea-who{cursor:default;border-style:dotted}
+.idea-ch{max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.idea-a{position:absolute;top:.35rem;right:.35rem;display:flex;gap:.1rem;opacity:0;transition:opacity .15s}
+.idea:hover .idea-a,.idea:focus-within .idea-a,.idea.pin .idea-a{opacity:1}
+.idea-a .ia{border:0;background:var(--sheet);border-radius:4px;width:26px;height:26px;cursor:pointer;color:var(--soft);font-size:.8rem;display:grid;place-items:center}
+.idea-a .ia:hover,.idea-a .ia[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+.idea-d{display:block;font:400 .66rem var(--f-mono);color:var(--faint);margin-top:.45rem}
+.idea-zoom{max-width:min(80vw,900px);max-height:70vh;display:block;margin:0 auto;border-radius:4px}
+.idea-quick{display:flex;flex-direction:column;gap:.6rem;min-width:min(28rem,80vw)}
+@media (hover:none){.idea-a{opacity:1}}
+.modal.wide{max-width:min(980px,96vw);width:min(980px,96vw)}
+.sk{display:flex;flex-direction:column;gap:.6rem}
+.sk-tools{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap}
+.sk-tools .spacer{flex:1}
+.sk-color{width:24px;height:24px;border-radius:50%;border:2px solid var(--sheet);box-shadow:0 0 0 1px var(--line2);cursor:pointer}
+.sk-color.on{box-shadow:0 0 0 2px var(--accent)}
+.sk-size{width:28px;height:28px;border-radius:6px;border:1px solid var(--line2);background:var(--bg);display:grid;place-items:center;cursor:pointer}
+.sk-size i{display:block;border-radius:50%;background:var(--ink)}
+.sk-size.on,.sk-erase.on{border-color:var(--accent);background:var(--accent-soft)}
+.sk-erase{border:1px solid var(--line2);background:var(--bg);border-radius:6px;padding:.2rem .6rem;font-size:.8rem;cursor:pointer;color:var(--ink)}
+.sk-canvas{width:100%;height:auto;aspect-ratio:900/560;border:1px solid var(--line);border-radius:4px;touch-action:none;cursor:crosshair;background:var(--sheet)}
+
 </style>
 </head>
 <body>
@@ -774,7 +824,7 @@ body.reading{overflow:hidden}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '9ef981e097';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '8e0425506c';</script>
 <script>
 (function () {
 'use strict';
@@ -1738,6 +1788,7 @@ const ICONS = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
   grid: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
   leer: '<path d="M12 6.5C10 5 7.5 4.5 4 4.5v13c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-13c-3.5 0-6 .5-8 2zM12 6.5v13"/>',
+  idea: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   book: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
   graph: '<circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 8.3l2.6 7.4M15.8 8.3l-2.6 7.4M8.5 7h7"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -2003,7 +2054,7 @@ const App = {
   go(hash) { if (location.hash.slice(1) === hash) this.route(); else location.hash = hash; },
   route() {
     const hs = (location.hash || '').slice(1);
-    const m = hs.match(/^p-([a-z0-9]+)(?:-(c)-([a-z0-9]+)|-(biblia|diagramas|estadisticas|ajustes))?$/);
+    const m = hs.match(/^p-([a-z0-9]+)(?:-(c)-([a-z0-9]+)|-(biblia|ideas|diagramas|estadisticas|ajustes))?$/);
     if (!m || !this.findProj(m[1])) { this.showHome(); return; }
     const pid = m[1];
     let tab = m[4] || 'escribir', cid = m[3] || null;
@@ -2046,7 +2097,7 @@ const App = {
     c.append(h('span', { class: 'sep', text: '/' }), h('button', { type: 'button', text: P.title, onclick: () => this.go('p-' + this.pid) }));
     let cur = null;
     if (this.tab === 'escribir' && this.cid) cur = this.chTitle(this.cid) || this.unit();
-    else cur = { biblia: 'Biblia', diagramas: 'Diagramas', estadisticas: 'Estadísticas', ajustes: 'Ajustes' }[this.tab];
+    else cur = { biblia: 'Biblia', ideas: 'Ideas', diagramas: 'Diagramas', estadisticas: 'Estadísticas', ajustes: 'Ajustes' }[this.tab];
     if (cur) c.append(h('span', { class: 'sep', text: '/' }), h('span', { class: 'cur', text: cur }));
   },
   renderSaveStatus() {
@@ -2284,6 +2335,8 @@ const App = {
         try { const vs = await RT.db.collection(base + '/chapters/' + c.id + '/versions').get(); for (const v of vs.docs) await RT.db.doc(base + '/chapters/' + c.id + '/versions/' + v.id).delete(); } catch (e) {}
         await RT.db.doc(base + '/chapters/' + c.id).delete();
       }
+      const ids = await RT.db.collection(base + '/ideas').get();
+      for (const c of ids.docs) await RT.db.doc(base + '/ideas/' + c.id).delete();
     } catch (e) {}
     await this.colls[space].remove(d.id);
     this.renderHomeSoon();
@@ -2306,6 +2359,7 @@ const App = {
     if (window.Editor) Editor.unmount();
     UI.closeDrawer(true);
     if (this.chapters) { this.chapters.close(); this.chapters = null; }
+    if (window.Ideas) Ideas.close();
     this.pid = null; this.cid = null;
   },
   onProjectDoc(sd, kind) {
@@ -2408,6 +2462,7 @@ const App = {
     };
     navItem('escribir', 'Escribir', 'pen', this.cid ? this.chHash(this.cid) : 'p-' + this.pid);
     navItem('biblia', 'Biblia', 'book', 'p-' + this.pid + '-biblia');
+    navItem('ideas', 'Ideas', 'idea', 'p-' + this.pid + '-ideas');
     navItem('diagramas', 'Diagramas', 'graph', 'p-' + this.pid + '-diagramas');
     navItem('estadisticas', 'Estadísticas', 'chart', 'p-' + this.pid + '-estadisticas');
     navItem('ajustes', 'Ajustes', 'gear', 'p-' + this.pid + '-ajustes');
@@ -2479,6 +2534,7 @@ const App = {
     } else {
       st.textContent = '';
       if (this.tab === 'biblia') Bible.render(st);
+      else if (this.tab === 'ideas') Ideas.render(st);
       else if (this.tab === 'diagramas') Diagrams.render(st);
       else if (this.tab === 'estadisticas') Stats.render(st);
       else if (this.tab === 'ajustes') this.renderSettings(st);
@@ -2657,6 +2713,10 @@ const App = {
       [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
+      [keys('alt', 'N'), 'Anotar una idea (va a «Ideas»)'],
+      [keys('alt', 'H'), 'Dejar un hueco «por escribir»'],
+      [keys('alt', 'S'), 'Separador de escena (* * *)'],
+      [keys('alt', 'enter'), 'Salto de página antes de este párrafo'],
       ['Seleccionar texto', RT.web ? 'Marcar a mano' : 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']
@@ -2769,6 +2829,7 @@ const Editor = {
     const P = App.P(), k = kindOf(P);
     const c = App.chapterList().find(x => x.id === this.cid);
     const part = c && c.role !== 'parte' ? Collections.partOf(this.cid) : null;
+    if (window.Ideas) setTimeout(() => Ideas.chapterBadge(), 0);
     const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : (c && c.role === 'parte') ? Collections.partLabel(c) + ' · ' + plural(Collections.children(c.id).length, k.unit.toLowerCase(), k.units.toLowerCase()) : (part ? Collections.partLabel(part) + ' · ' : '') + k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
     if (this.navEl) { const nn = Pages.navEl(); this.navEl.replaceWith(nn); this.navEl = nn; }
     if (document.activeElement !== this.titleEl) this.titleEl.value = App.chTitle(this.cid);
@@ -2869,7 +2930,10 @@ const Editor = {
   moreMenu(a) {
     const items = [
       { label: 'Guardar una versión', kbd: keys('mod', 'S'), disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
-      { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
+      { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', kbd: keys('alt', 'enter'), disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
+      { label: 'Hueco por escribir', kbd: keys('alt', 'H'), disabled: !RT.canWrite, onClick: () => this.insertGap() },
+      { label: 'Separador de escena (* * *)', kbd: keys('alt', 'S'), disabled: !RT.canWrite, onClick: () => this.insertSep() },
+      { label: 'Anotar una idea', kbd: keys('alt', 'N'), disabled: !RT.canWrite, onClick: () => Ideas.quick() },
       { label: 'Ir a…', kbd: keys('mod', 'K'), onClick: () => Pages.palette() },
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
@@ -2918,6 +2982,8 @@ const Editor = {
       else { const c = this.getCaret() || this.lastCaret; if (c) Review.reviewPara(this.cid, c.pid, true); }
       return;
     }
+    // estructura: hueco por escribir, separador de escena y salto de página
+    if (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyH' || e.code === 'KeyS' || e.key === 'Enter')) { e.preventDefault(); if (e.code === 'KeyH') this.insertGap(); else if (e.code === 'KeyS') this.insertSep(); else Pages.toggleBreak((this.getCaret() || this.lastCaret || {}).pid); return; }
     // diálogo: Alt + guion abre la línea con raya; Alt + I abre o cierra el inciso
     if (e.altKey && !mod && !e.shiftKey && window.Dialogo && (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'Slash' && /[-–]/.test(e.key) || e.code === 'KeyI')) { e.preventDefault(); if (e.code === 'KeyI') Dialogo.inciso(); else Dialogo.open(); return; }
     if (mod && !e.altKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) this.redo(); else this.undo(); return; }
@@ -3028,6 +3094,7 @@ const Editor = {
     const pe = document.createElement('p');
     pe.dataset.id = p.id;
     if (p.pb) pe.className = 'pb';
+    if (p.segs.length === 1 && p.segs[0].t != null && /^\s*(?:(?:\*\s*){3}|⁂|#)\s*$/.test(p.segs[0].t)) pe.classList.add('sep');
     p.segs.forEach(s => {
       if (s.t != null) pe.append(s.t);
       else if (s.m) {
@@ -3224,6 +3291,41 @@ const Editor = {
   },
 
   /* ---------- operaciones de párrafo ---------- */
+  /* Párrafo nuevo después del actual, con el contenido dado (segs). Devuelve su id. */
+  insertParaAfter(segs, extra) {
+    if (!RT.canWrite || !this.cdoc) return null;
+    const c = this.getCaret() || this.lastCaret; const i = c ? this.pIndex(c.pid) : this.cdoc.data.paras.length - 1;
+    this.pushUndo();
+    const np = Object.assign({ id: uid('p'), segs: segs }, extra || {});
+    const cur = this.cdoc.data.paras[i];
+    const empty = cur && !parText(cur).trim();
+    this.cdoc.update(d => { if (empty) d.paras[i] = Object.assign({}, np, { id: cur.id }); else d.paras.splice(i + 1, 0, np); }, { silent: true });
+    const id = empty ? cur.id : np.id;
+    this.addDirty(id);
+    this.render(); this.afterChange();
+    return id;
+  },
+  /* Hueco «por escribir»: un párrafo marcado como pendiente para rellenar después. */
+  insertGap() {
+    const m = { id: uid('m'), type: 'pend', text: '[por escribir]', note: 'Hueco por rellenar. Escribe dentro de los corchetes qué va aquí, o reemplázalo por el texto cuando lo tengas.', by: RT.me || 'local', at: Date.now(), gap: true };
+    const pid = this.insertParaAfter([{ m: m }]);
+    if (!pid) return;
+    // nuevo párrafo vacío después del hueco para seguir escribiendo
+    const i = this.pIndex(pid);
+    this.cdoc.update(d => { d.paras.splice(i + 1, 0, { id: uid('p'), segs: [] }); }, { silent: true });
+    this.render();
+    const nid = this.cdoc.data.paras[i + 1].id;
+    this.root.focus(); this.setCaret({ pid: nid, off: 0 });
+    App.toast('Hueco agregado. Aparece en «Ir a…» y en las notas como pendiente.', { id: 'gap' });
+  },
+  insertSep() {
+    const pid = this.insertParaAfter([{ t: '* * *' }]);
+    if (!pid) return;
+    const i = this.pIndex(pid);
+    this.cdoc.update(d => { d.paras.splice(i + 1, 0, { id: uid('p'), segs: [] }); }, { silent: true });
+    this.render();
+    this.root.focus(); this.setCaret({ pid: this.cdoc.data.paras[i + 1].id, off: 0 });
+  },
   splitAtCaret() {
     if (!RT.canWrite) return;
     if (!getSelection().isCollapsed) { document.execCommand('delete'); this.sync('deleteContentBackward'); }
@@ -6876,8 +6978,9 @@ const Pages = {
     if (App.view !== 'project') return;
     const items = [];
     App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) || c.role === 'parte' ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : c.role === 'parte' ? Collections.partLabel(c) : '', fn: () => App.go(App.chHash(c.id)) }));
+    App.chapterList().forEach(c => { const d = App.ch(c.id); if (!d || !d.data) return; d.data.paras.forEach(p => p.segs.forEach(s => { if (s.m && s.m.type === 'pend' && !s.m.done) items.push({ g: 'Por escribir', t: s.m.text.replace(/^\[|\]$/g, '') || 'por escribir', s: c.title || this.label(c), fn: () => { App.go(App.chHash(c.id)); setTimeout(() => { const pe = Editor.root && Editor.root.querySelector('p[data-id="' + p.id + '"]'); if (pe) { pe.scrollIntoView({ block: 'center' }); Editor.setActive && Editor.setActive(s.m.id, false); } }, 300); } }); })); });
     if (App.tab === 'escribir' && this.pages.length > 1) this.pages.forEach((pg, i) => items.push({ g: 'Páginas de este ' + App.unit().toLowerCase(), t: 'Página ' + (i + 1), s: pg.peek, fn: () => this.goPage(i + 1) }));
-    [['Biblia', '-biblia'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
+    [['Biblia', '-biblia'], ['Ideas', '-ideas'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
     const inp = h('input', { class: 'inp', placeholder: 'Escribe para filtrar: capítulo, página, «biblia»…', 'aria-label': 'Ir a' });
     const list = h('div', { class: 'pal-list', role: 'listbox' });
     let sel = 0, shown = [];
@@ -7555,6 +7658,300 @@ window.Lectura = Lectura;
 document.addEventListener('keydown', (e) => {
   if (!window.App || App.view !== 'project' || Lectura.el) return;
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); Lectura.open(); }
+});
+
+/* ============ ideas: notas sueltas, imágenes y garabatos dentro del proyecto ============
+   Cada idea es un documento en <proyecto>/ideas. Se clasifica sola (sin IA) por palabras y por los
+   nombres de la biblia; con IA se puede reordenar. Nunca se inventa contenido: solo se ordena. */
+const IDEA_CATS = {
+  trama: { l: 'Trama y escenas', g: '◆' },
+  personaje: { l: 'Personajes', g: '☺' },
+  lugar: { l: 'Lugares', g: '⌂' },
+  mundo: { l: 'Mundo', g: '◎' },
+  tema: { l: 'Temas', g: '✦' },
+  dialogo: { l: 'Diálogos y frases', g: '❝' },
+  imagen: { l: 'Imágenes', g: '▣' },
+  investigar: { l: 'Por investigar', g: '?' },
+  otra: { l: 'Otras', g: '·' }
+};
+const IDEA_WORDS = {
+  trama: /\b(escena|cap[ií]tulo|final|comienz|empiez|termina|giro|revela|descubr|muere|mata|huye|vuelve|regresa|encuentr|pelea|se van|llega|despu[eé]s de|antes de|cuando|flashback|conflicto|cl[ií]max|trama)/i,
+  mundo: /\b(regla|magia|[eé]poca|siglo|sociedad|pol[ií]tica|religi[oó]n|tecnolog|historia del|leyenda|costumbre|idioma|moneda|guerra|reino|ciudad de)/i,
+  tema: /\b(tema|trata (de|sobre)|s[ií]mbolo|met[aá]fora|representa|sentido de|la culpa|el miedo|la memoria|el duelo|la soledad|la identidad|el amor|la muerte)/i,
+  investigar: /(investigar|averiguar|buscar|revisar si|chequear|confirmar|dato|fuente|\?$)/i
+};
+
+const Ideas = {
+  pid: null, coll: null, filter: 'todas', q: '', draft: '', draftImg: null, chFilter: null,
+  open() {
+    if (this.pid === App.pid && this.coll) return this.coll;
+    if (this.coll) { try { this.coll.close(); } catch (e) {} }
+    this.pid = App.pid;
+    this.coll = new Coll(App.ppath(App.pid) + '/ideas', { onChange: () => this.changed() });
+    return this.coll;
+  },
+  close() { if (this.coll) { try { this.coll.close(); } catch (e) {} } this.coll = null; this.pid = null; },
+  list() { const c = this.open(); return c ? c.list().map(d => Object.assign({ id: d.id, doc: d }, d.data)).filter(x => !x.deleted).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || (b.at || 0) - (a.at || 0)) : []; },
+  changed: debounce(function () { if (App.tab === 'ideas' && !Ideas.typing) Ideas.render(); if (window.Editor && Editor.root) Ideas.chapterBadge(); }, 120),
+  /* ---------- clasificación sin IA ---------- */
+  names() {
+    const out = { personaje: [], lugar: [], otro: [] };
+    ((App.P() && App.P().bible && App.P().bible.sections) || []).forEach(s => {
+      const k = s.graph || /personaj/i.test(s.label) ? 'personaje' : /lugar|locaci/i.test(s.label) ? 'lugar' : 'otro';
+      (s.items || []).forEach(it => { if (it.title) out[k].push(it.title.trim()); ((it.fields && it.fields['También llamado']) || '').split(',').forEach(a => { a = a.trim(); if (a) out[k].push(a); }); });
+    });
+    return out;
+  },
+  classify(text, hasImg) {
+    const t = (text || '').trim();
+    if (!t && hasImg) return 'imagen';
+    if (/^[—–-]\s*\S/.test(t) || /«[^»]{3,}»/.test(t) || /^"[^"]{3,}"/.test(t)) return 'dialogo';
+    if (IDEA_WORDS.investigar.test(t) && t.length < 220) return 'investigar';
+    const n = this.names(); const has = (arr) => arr.some(nm => new RegExp('(?<![\\p{L}])' + escRe(nm) + '(?![\\p{L}])', 'iu').test(t));
+    if (IDEA_WORDS.trama.test(t)) return 'trama';
+    if (has(n.personaje)) return 'personaje';
+    if (has(n.lugar)) return 'lugar';
+    if (IDEA_WORDS.mundo.test(t)) return 'mundo';
+    if (IDEA_WORDS.tema.test(t)) return 'tema';
+    if (hasImg) return 'imagen';
+    return 'otra';
+  },
+  mentions(text) {
+    const n = this.names(); const all = n.personaje.concat(n.lugar, n.otro);
+    return Array.from(new Set(all.filter(nm => nm.split(/\s+/).length <= 4 && new RegExp('(?<![\\p{L}])' + escRe(nm) + '(?![\\p{L}])', 'iu').test(text || ''))));
+  },
+  /* ---------- guardar ---------- */
+  add(o) {
+    const c = this.open(); if (!c || !RT.canWrite) return null;
+    const id = uid('i');
+    const text = (o.text || '').trim();
+    const cat = o.cat || this.classify(text, !!o.img);
+    c.create(id, { text: text, img: o.img || null, kind: o.kind || (o.img ? 'imagen' : 'texto'), cat: cat, catAuto: !o.cat, cid: o.cid || null, at: Date.now(), by: RT.me || 'local', pin: false, done: false });
+    this.changed();
+    return id;
+  },
+  update(id, fn) { const d = this.open().get(id); if (d) { d.update(fn, { now: true }); this.changed(); } },
+  remove(id) {
+    const d = this.open().get(id); if (!d) return;
+    const keep = clone(d.data);
+    d.update(x => { x.deleted = true; }, { now: true });
+    this.changed();
+    App.toast('Idea borrada.', { action: { label: 'Deshacer', fn: () => { d.update(x => { delete x.deleted; Object.assign(x, keep); delete x.deleted; }, { now: true }); this.changed(); } } });
+  },
+  /* ---------- imágenes ---------- */
+  async compress(fileOrUrl, png) {
+    const src = typeof fileOrUrl === 'string' ? fileOrUrl : await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(fileOrUrl); });
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    let w = img.naturalWidth, hh = img.naturalHeight; const max = 1280;
+    if (w > max || hh > max) { const k = max / Math.max(w, hh); w = Math.round(w * k); hh = Math.round(hh * k); }
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = hh;
+    const ctx = cv.getContext('2d');
+    if (!png) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, hh); }
+    ctx.drawImage(img, 0, 0, w, hh);
+    let out = png ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.82);
+    for (let q = 0.7; out.length > 600000 && q >= 0.35; q -= 0.12) out = cv.toDataURL('image/jpeg', q);
+    return out;
+  },
+  /* ---------- garabatos ---------- */
+  sketch(onDone, existing) {
+    const W = 900, H = 560;
+    const cv = h('canvas', { width: String(W), height: String(H), class: 'sk-canvas', 'aria-label': 'Hoja para dibujar' });
+    const ctx = cv.getContext('2d');
+    const paper = getComputedStyle(document.body).getPropertyValue('--sheet').trim() || '#fbf8f2';
+    const ink = getComputedStyle(document.body).getPropertyValue('--ink').trim() || '#2a221b';
+    const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#8a5c16';
+    const fill = () => { ctx.fillStyle = paper; ctx.fillRect(0, 0, W, H); };
+    fill();
+    const undo = [];
+    const snap = () => { undo.push(ctx.getImageData(0, 0, W, H)); if (undo.length > 30) undo.shift(); };
+    if (existing) { const i = new Image(); i.onload = () => { ctx.drawImage(i, 0, 0, W, H); }; i.src = existing; }
+    let color = ink, size = 3, erase = false, drawing = false, last = null;
+    const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, p: e.pressure || 0.5 }; };
+    cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); snap(); drawing = true; last = pos(e); ctx.beginPath(); ctx.arc(last.x, last.y, (erase ? size * 4 : size) / 2, 0, Math.PI * 2); ctx.fillStyle = erase ? paper : color; ctx.fill(); });
+    cv.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.strokeStyle = erase ? paper : color; ctx.lineWidth = (erase ? size * 4 : size) * (e.pointerType === 'pen' ? 0.6 + p.p : 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; });
+    const end = () => { drawing = false; };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    const tools = h('div', { class: 'sk-tools' });
+    const colors = [ink, accent, '#b4442f', '#2f6db4', '#3c8a52'];
+    colors.forEach((c, i) => tools.append(h('button', { type: 'button', class: 'sk-color' + (i === 0 ? ' on' : ''), style: 'background:' + c, 'aria-label': 'Color', onclick: (e) => { color = c; erase = false; $$('.sk-color,.sk-erase', tools).forEach(b => b.classList.remove('on')); e.currentTarget.classList.add('on'); } })));
+    [2, 4, 8].forEach((s, i) => tools.append(h('button', { type: 'button', class: 'sk-size' + (i === 0 ? '' : '') + (s === 4 ? ' on' : ''), 'aria-label': 'Grosor ' + s, onclick: (e) => { size = s; $$('.sk-size', tools).forEach(b => b.classList.remove('on')); e.currentTarget.classList.add('on'); } }, h('i', { style: 'width:' + (s + 2) + 'px;height:' + (s + 2) + 'px' }))));
+    size = 4;
+    tools.append(h('button', { type: 'button', class: 'sk-erase', onclick: (e) => { erase = true; $$('.sk-color', tools).forEach(b => b.classList.remove('on')); e.currentTarget.classList.add('on'); } }, 'Goma'));
+    tools.append(h('span', { class: 'spacer' }));
+    tools.append(btn('Deshacer', () => { const d = undo.pop(); if (d) ctx.putImageData(d, 0, 0); }, 'small'));
+    tools.append(btn('Limpiar', () => { snap(); fill(); }, 'small'));
+    UI.modal({ title: 'Garabato', body: h('div', { class: 'sk' }, tools, cv), buttons: [{ label: 'Cancelar' }, { label: 'Guardar garabato', cls: 'primary', onClick: () => { onDone(cv.toDataURL('image/png')); } }] });
+    const m = cv.closest('.modal'); if (m) m.classList.add('wide');
+  },
+  /* ---------- captura rápida (desde cualquier parte del proyecto) ---------- */
+  quick() {
+    if (!App.pid || !RT.canWrite) return;
+    let img = null;
+    const ta = h('textarea', { class: 'inp', rows: '4', placeholder: 'Una idea, una frase, algo que no sabes dónde va…', 'aria-label': 'Idea' });
+    const prev = h('div', { class: 'idea-prev' });
+    const setImg = (u) => { img = u; prev.textContent = ''; if (u) prev.append(h('img', { src: u, alt: '' }), btn('Quitar', () => setImg(null), 'small ghost')); };
+    ta.addEventListener('paste', async (e) => { const f = Array.from(e.clipboardData.files || []).find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); setImg(await this.compress(f)); } });
+    const here = App.tab === 'escribir' && App.cid ? h('input', { type: 'checkbox' }) : null;
+    const fi = h('input', { type: 'file', accept: 'image/*', hidden: true });
+    fi.addEventListener('change', async () => { if (fi.files[0]) setImg(await this.compress(fi.files[0])); fi.value = ''; });
+    const save = () => { if (!ta.value.trim() && !img) return false; this.add({ text: ta.value, img: img, kind: img ? (img.startsWith('data:image/png') ? 'garabato' : 'imagen') : 'texto', cid: here && here.checked ? App.cid : null }); App.toast('Idea guardada en «Ideas».', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-ideas') } }); };
+    UI.modal({ title: 'Nueva idea', body: h('div', { class: 'idea-quick' }, ta, prev,
+      h('div', { class: 'row', style: 'gap:.4rem' }, btn([icon('plus'), 'Imagen'], () => fi.click(), 'small'), btn([icon('pen'), 'Garabato'], () => this.sketch((u) => setImg(u)), 'small'), fi,
+        here ? h('label', { class: 'row', style: 'gap:.35rem;font-size:.85rem;margin-left:auto' }, here, 'Va en este ' + App.unit().toLowerCase()) : null)),
+      buttons: [{ label: 'Cancelar' }, { label: 'Guardar idea', cls: 'primary', onClick: save }] });
+    ta.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (save() !== false) UI.modalStack[UI.modalStack.length - 1](); } });
+    setTimeout(() => ta.focus(), 40);
+  },
+  /* ---------- vista ---------- */
+  render(st) {
+    st = st || $('#stage'); if (!st || App.tab !== 'ideas') return;
+    const P = App.P(); if (!P) return;
+    const keepFocus = document.activeElement && document.activeElement.id === 'idea-in';
+    const all = this.list();
+    st.textContent = '';
+    const wrap = h('div', { class: 'ideas' });
+    wrap.append(h('div', { class: 'vhead', style: 'margin:0' }, h('div', null, h('h2', { text: 'Ideas' }), h('p', { text: 'Notas sueltas, frases, imágenes y garabatos que todavía no sabes dónde van. Se ordenan solos por tema; tú decides qué hacer con ellos.' })),
+      h('div', { class: 'row' }, RT.canWrite && RT.sample && (!RT.web || AI.ready()) ? btn([icon('spark'), 'Ordenar con IA'], () => this.aiSort(), 'small') : null)));
+    // captura
+    if (RT.canWrite) {
+      const ta = h('textarea', { class: 'inp', id: 'idea-in', rows: '3', placeholder: 'Anota una idea… (' + keys('mod', 'enter') + ' para guardar; también puedes pegar o arrastrar una imagen)', 'aria-label': 'Nueva idea' });
+      ta.value = this.draft;
+      const prev = h('div', { class: 'idea-prev' });
+      const setImg = (u) => { this.draftImg = u; prev.textContent = ''; if (u) prev.append(h('img', { src: u, alt: '' }), btn('Quitar', () => setImg(null), 'small ghost')); };
+      setImg(this.draftImg);
+      ta.addEventListener('input', () => { this.draft = ta.value; this.typing = true; clearTimeout(this.tt); this.tt = setTimeout(() => { this.typing = false; }, 1500); });
+      ta.addEventListener('paste', async (e) => { const f = Array.from(e.clipboardData.files || []).find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); setImg(await this.compress(f)); } });
+      const save = () => {
+        if (!ta.value.trim() && !this.draftImg) return;
+        this.add({ text: ta.value, img: this.draftImg, kind: this.draftImg ? (this.draftImg.startsWith('data:image/png') ? 'garabato' : 'imagen') : 'texto', cid: this.chFilter || null });
+        this.draft = ''; this.draftImg = null; this.typing = false; this.render(); setTimeout(() => { const t = $('#idea-in'); if (t) t.focus(); }, 30);
+      };
+      ta.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); } });
+      const fi = h('input', { type: 'file', accept: 'image/*', hidden: true, multiple: true });
+      fi.addEventListener('change', async () => { for (const f of Array.from(fi.files)) this.add({ text: '', img: await this.compress(f), kind: 'imagen', cid: this.chFilter || null }); fi.value = ''; });
+      const cap = h('div', { class: 'idea-cap' }, ta, prev, h('div', { class: 'row', style: 'gap:.4rem' },
+        btn([icon('plus'), 'Imágenes'], () => fi.click(), 'small'), btn([icon('pen'), 'Garabato'], () => this.sketch((u) => { this.add({ text: ta.value, img: u, kind: 'garabato', cid: this.chFilter || null }); this.draft = ''; this.render(); }), 'small'), fi,
+        h('span', { class: 'spacer' }), btn('Guardar idea', save, 'small primary')));
+      cap.addEventListener('dragover', (e) => { e.preventDefault(); cap.classList.add('drop'); });
+      cap.addEventListener('dragleave', () => cap.classList.remove('drop'));
+      cap.addEventListener('drop', async (e) => { e.preventDefault(); cap.classList.remove('drop'); for (const f of Array.from(e.dataTransfer.files || []).filter(x => /^image\//.test(x.type))) this.add({ text: '', img: await this.compress(f), kind: 'imagen', cid: this.chFilter || null }); });
+      wrap.append(cap);
+    }
+    // filtros
+    const counts = {}; Object.keys(IDEA_CATS).forEach(k => counts[k] = 0); all.forEach(x => { if (!x.done) counts[x.cat || 'otra'] = (counts[x.cat || 'otra'] || 0) + 1; });
+    const fbar = h('div', { class: 'fbar ideas-f' });
+    const chip = (key, label, n, g) => h('button', { type: 'button', class: 'fchip' + (this.filter === key ? ' on' : ''), onclick: () => { this.filter = key; this.render(); } }, g ? h('span', { class: 'ig', text: g }) : null, h('span', { text: label }), h('b', { text: String(n) }));
+    fbar.append(chip('todas', 'Todas', all.filter(x => !x.done).length));
+    Object.keys(IDEA_CATS).forEach(k => { if (counts[k]) fbar.append(chip(k, IDEA_CATS[k].l, counts[k], IDEA_CATS[k].g)); });
+    const sinLugar = all.filter(x => !x.done && !x.cid).length; if (sinLugar && sinLugar !== all.filter(x => !x.done).length) fbar.append(chip('sinlugar', 'Sin lugar', sinLugar));
+    const usadas = all.filter(x => x.done).length; if (usadas) fbar.append(chip('usadas', 'Usadas', usadas));
+    const search = h('input', { class: 'inp idea-q', placeholder: 'Buscar…', value: this.q, 'aria-label': 'Buscar en ideas' });
+    search.addEventListener('input', debounce(() => { this.q = search.value; this.render(); const s = $('.idea-q'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } }, 250));
+    fbar.append(h('span', { class: 'spacer' }), search);
+    if (all.length) wrap.append(fbar);
+    if (this.chFilter) { const c = App.chapterList().find(x => x.id === this.chFilter); wrap.append(h('div', { class: 'idea-chf' }, 'Ideas para «' + (c ? c.title || Pages.label(c) : '') + '»', btn('Ver todas', () => { this.chFilter = null; this.render(); }, 'small ghost'))); }
+    // tarjetas
+    const q = fold(this.q.trim());
+    const shown = all.filter(x => (this.filter === 'usadas' ? x.done : !x.done) && (this.filter === 'todas' || this.filter === 'usadas' || (this.filter === 'sinlugar' ? !x.cid : (x.cat || 'otra') === this.filter)) && (!q || fold(x.text || '').includes(q)) && (!this.chFilter || x.cid === this.chFilter));
+    const grid = h('div', { class: 'idea-grid' });
+    shown.forEach(x => grid.append(this.card(x)));
+    if (!all.length) wrap.append(h('div', { class: 'empty', text: 'Todavía no hay ideas. Anota la primera arriba, o usa ' + keys('alt', 'N') + ' desde cualquier parte del proyecto.' }));
+    else if (!shown.length) wrap.append(h('div', { class: 'empty', text: 'No hay ideas con ese filtro.' }));
+    wrap.append(grid);
+    st.append(wrap);
+    if (keepFocus) { const t = $('#idea-in'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+  },
+  card(x) {
+    const cat = IDEA_CATS[x.cat] || IDEA_CATS.otra;
+    const ch = x.cid ? App.chapterList().find(c => c.id === x.cid) : null;
+    const el = h('article', { class: 'idea' + (x.pin ? ' pin' : '') + (x.done ? ' done' : '') + (x.img && !x.text ? ' only-img' : ''), dataset: { id: x.id } });
+    if (x.img) el.append(h('img', { src: x.img, alt: x.kind === 'garabato' ? 'Garabato' : 'Imagen', loading: 'lazy', onclick: () => this.zoomImg(x.img) }));
+    if (x.text) el.append(h('p', { class: 'idea-t', text: x.text }));
+    const meta = h('div', { class: 'idea-m' });
+    meta.append(h('button', { type: 'button', class: 'idea-cat', title: (x.catAuto ? 'Clasificada sola' : 'Clasificada por ti') + '. Toca para cambiar.', onclick: (e) => RT.canWrite && this.catMenu(e.currentTarget, x) }, h('span', { text: cat.g }), cat.l + (x.catAuto ? '' : ' ✓')));
+    this.mentions(x.text).slice(0, 3).forEach(n => meta.append(h('span', { class: 'idea-who', text: n })));
+    meta.append(h('button', { type: 'button', class: 'idea-ch', title: 'Dónde va', onclick: (e) => RT.canWrite && this.chMenu(e.currentTarget, x) }, ch ? '→ ' + (ch.title || Pages.label(ch)) : 'Sin lugar'));
+    el.append(meta);
+    if (RT.canWrite) el.append(h('div', { class: 'idea-a' },
+      h('button', { type: 'button', class: 'ia', title: x.pin ? 'Desfijar' : 'Fijar arriba', 'aria-pressed': x.pin ? 'true' : 'false', onclick: () => this.update(x.id, z => { z.pin = !z.pin; }) }, '★'),
+      h('button', { type: 'button', class: 'ia', title: x.done ? 'Volver a pendientes' : 'Marcar como usada', onclick: () => this.update(x.id, z => { z.done = !z.done; }) }, x.done ? '↺' : '✓'),
+      ibtn('more', 'Opciones', (e) => this.menu(e.currentTarget, x), { class: 'ibtn ia' })));
+    el.append(h('time', { class: 'idea-d', text: relTime(x.at) }));
+    return el;
+  },
+  catMenu(a, x) { UI.menu(a, Object.keys(IDEA_CATS).map(k => ({ label: IDEA_CATS[k].g + '  ' + IDEA_CATS[k].l, checked: x.cat === k, onClick: () => this.update(x.id, z => { z.cat = k; z.catAuto = false; }) }))); },
+  chMenu(a, x) {
+    UI.menu(a, [{ label: 'Sin lugar todavía', checked: !x.cid, onClick: () => this.update(x.id, z => { z.cid = null; }) }, { sep: true }]
+      .concat(App.chapterList().map(c => ({ label: c.title || Pages.label(c), checked: x.cid === c.id, onClick: () => this.update(x.id, z => { z.cid = c.id; }) }))));
+  },
+  menu(a, x) {
+    const items = [
+      { label: 'Editar texto', onClick: async () => { const t = await UI.prompt('Editar idea', 'Texto', x.text || ''); if (t != null) this.update(x.id, z => { z.text = t.trim(); if (z.catAuto) z.cat = this.classify(z.text, !!z.img); }); } },
+      x.img && x.kind === 'garabato' ? { label: 'Seguir el garabato', onClick: () => this.sketch((u) => this.update(x.id, z => { z.img = u; }), x.img) } : null,
+      x.cid ? { label: 'Abrir el ' + App.unit().toLowerCase(), onClick: () => App.go(App.chHash(x.cid)) } : null,
+      (x.cat === 'personaje' || x.cat === 'lugar' || x.cat === 'mundo') && x.text ? { label: 'Crear ficha en la biblia', onClick: () => this.toBible(x) } : null,
+      x.cat === 'investigar' || x.cat === 'trama' ? { label: 'Llevar a cabos sueltos', onClick: () => this.toThread(x) } : null,
+      { sep: true },
+      { label: 'Borrar', danger: true, onClick: () => this.remove(x.id) }
+    ];
+    UI.menu(a, items);
+  },
+  toBible(x) {
+    const want = x.cat === 'personaje' ? /personaj/i : x.cat === 'lugar' ? /lugar|locaci/i : /mundo|regla/i;
+    const P = App.P();
+    // si la idea nombra a alguien que ya tiene ficha, se agrega a sus notas
+    let target = null;
+    ((P.bible && P.bible.sections) || []).forEach(s => (s.items || []).forEach(it => { if (!target && it.title && new RegExp('(?<![\\p{L}])' + escRe(it.title.trim()) + '(?![\\p{L}])', 'iu').test(x.text)) target = { sid: s.id, iid: it.id, title: it.title }; }));
+    if (target) {
+      App.proj().update(p => { const s = p.bible.sections.find(z => z.id === target.sid); const it = s && s.items.find(z => z.id === target.iid); if (it) it.body = ((it.body || '').trim() ? it.body.trim() + '\n\n' : '') + x.text; }, { now: true });
+      App.toast('Agregada a las notas de la ficha de «' + target.title + '».', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-biblia') } });
+      return;
+    }
+    const first = (x.text.split(/[.:\n,—]/)[0] || '').trim().split(/\s+/).slice(0, 5).join(' ');
+    App.proj().update(p => {
+      p.bible = p.bible || { sections: [] };
+      let s = p.bible.sections.find(z => want.test(z.label) || (x.cat === 'personaje' && z.graph));
+      if (!s) { s = { id: uid('s'), label: x.cat === 'personaje' ? 'Personajes' : x.cat === 'lugar' ? 'Lugares' : 'Mundo y reglas', fields: [], graph: x.cat === 'personaje', items: [] }; p.bible.sections.push(s); }
+      s.items = s.items || []; s.items.push({ id: uid('i'), title: first, fields: {}, body: x.text });
+    }, { now: true });
+    App.toast('Ficha creada en la biblia: «' + first + '». Revisa el título.', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-biblia') } });
+  },
+  toThread(x) {
+    App.proj().update(p => { p.threads = p.threads || []; p.threads.push({ id: uid('t'), title: (x.text || '').split('\n')[0].slice(0, 90), body: x.text, status: 'open', cid: x.cid || undefined, at: Date.now() }); }, { now: true });
+    App.toast('Quedó en «Cabos sueltos» de la biblia.');
+  },
+  zoomImg(src) { UI.modal({ title: 'Imagen', body: h('img', { src: src, alt: '', class: 'idea-zoom' }), buttons: [{ label: 'Cerrar', cls: 'primary' }] }); },
+  /* Ordenar con IA: solo asigna categorías; no agrega ni cambia el texto. */
+  async aiSort() {
+    if (!Review.ok()) return;
+    const items = this.list().filter(x => x.text && x.catAuto && !x.done).slice(0, 60);
+    if (!items.length) { App.toast('No hay ideas sin clasificar a mano.'); return; }
+    App.toast('Ordenando ' + plural(items.length, 'idea') + '…', { id: 'ais', ms: 8000 });
+    const prompt = 'Clasifica cada idea de un proyecto de escritura en UNA categoría: ' + Object.keys(IDEA_CATS).join(', ') + '. No inventes ni reescribas nada; solo clasifica.\n' +
+      'Personajes de la biblia: ' + (this.names().personaje.join(', ') || '—') + '. Lugares: ' + (this.names().lugar.join(', ') || '—') + '.\n' +
+      'Responde solo JSON: [{"n":número,"cat":"categoría"}].\n\n' + items.map((x, i) => (i + 1) + '. ' + x.text.replace(/\s+/g, ' ').slice(0, 400)).join('\n');
+    try {
+      const r = await RT.sample(prompt, { modelTier: 'quick' });
+      const arr = parseJsonLoose ? parseJsonLoose(r.text) : JSON.parse(r.text);
+      let n = 0;
+      (Array.isArray(arr) ? arr : []).forEach(o => { const x = items[(+o.n) - 1]; if (x && IDEA_CATS[o.cat] && o.cat !== x.cat) { this.update(x.id, z => { z.cat = o.cat; }); n++; } });
+      App.toast(n ? plural(n, 'idea reubicada', 'ideas reubicadas') + '.' : 'La clasificación ya estaba bien.', { id: 'ais' });
+    } catch (e) { App.toast('No se pudo ordenar ahora. Intenta de nuevo.', { id: 'ais' }); }
+  },
+  /* Indicador en el editor: ideas asignadas a este capítulo. */
+  chapterBadge() {
+    const eb = $('#ch-eyebrow'); if (!eb || !App.cid) return;
+    const n = this.list().filter(x => x.cid === App.cid && !x.done).length;
+    let b = $('#idea-badge');
+    if (!n) { if (b) b.remove(); return; }
+    if (!b) { b = h('button', { type: 'button', id: 'idea-badge', class: 'idea-badge', onclick: () => { this.chFilter = App.cid; App.go('p-' + App.pid + '-ideas'); } }); eb.after(b); }
+    b.textContent = '✦ ' + plural(n, 'idea', 'ideas') + ' para este ' + App.unit().toLowerCase();
+  }
+};
+window.Ideas = Ideas;
+document.addEventListener('keydown', (e) => {
+  if (!window.App || App.view !== 'project' || !RT.canWrite) return;
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyN') { e.preventDefault(); Ideas.quick(); }
 });
 
 /* utilidades visibles para depurar desde la consola */

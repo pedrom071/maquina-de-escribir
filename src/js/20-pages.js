@@ -88,8 +88,9 @@ const Pages = {
     if (App.view !== 'project') return;
     const items = [];
     App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) || c.role === 'parte' ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : c.role === 'parte' ? Collections.partLabel(c) : '', fn: () => App.go(App.chHash(c.id)) }));
+    App.chapterList().forEach(c => { const d = App.ch(c.id); if (!d || !d.data) return; d.data.paras.forEach(p => p.segs.forEach(s => { if (s.m && s.m.type === 'pend' && !s.m.done) items.push({ g: 'Por escribir', t: s.m.text.replace(/^\[|\]$/g, '') || 'por escribir', s: c.title || this.label(c), fn: () => { App.go(App.chHash(c.id)); setTimeout(() => { const pe = Editor.root && Editor.root.querySelector('p[data-id="' + p.id + '"]'); if (pe) { pe.scrollIntoView({ block: 'center' }); Editor.setActive && Editor.setActive(s.m.id, false); } }, 300); } }); })); });
     if (App.tab === 'escribir' && this.pages.length > 1) this.pages.forEach((pg, i) => items.push({ g: 'Páginas de este ' + App.unit().toLowerCase(), t: 'Página ' + (i + 1), s: pg.peek, fn: () => this.goPage(i + 1) }));
-    [['Biblia', '-biblia'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
+    [['Biblia', '-biblia'], ['Ideas', '-ideas'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
     const inp = h('input', { class: 'inp', placeholder: 'Escribe para filtrar: capítulo, página, «biblia»…', 'aria-label': 'Ir a' });
     const list = h('div', { class: 'pal-list', role: 'listbox' });
     let sel = 0, shown = [];

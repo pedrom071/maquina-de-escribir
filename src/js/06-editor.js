@@ -94,6 +94,7 @@ const Editor = {
     const P = App.P(), k = kindOf(P);
     const c = App.chapterList().find(x => x.id === this.cid);
     const part = c && c.role !== 'parte' ? Collections.partOf(this.cid) : null;
+    if (window.Ideas) setTimeout(() => Ideas.chapterBadge(), 0);
     const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : (c && c.role === 'parte') ? Collections.partLabel(c) + ' · ' + plural(Collections.children(c.id).length, k.unit.toLowerCase(), k.units.toLowerCase()) : (part ? Collections.partLabel(part) + ' · ' : '') + k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
     if (this.navEl) { const nn = Pages.navEl(); this.navEl.replaceWith(nn); this.navEl = nn; }
     if (document.activeElement !== this.titleEl) this.titleEl.value = App.chTitle(this.cid);
@@ -194,7 +195,10 @@ const Editor = {
   moreMenu(a) {
     const items = [
       { label: 'Guardar una versión', kbd: keys('mod', 'S'), disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
-      { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
+      { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', kbd: keys('alt', 'enter'), disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
+      { label: 'Hueco por escribir', kbd: keys('alt', 'H'), disabled: !RT.canWrite, onClick: () => this.insertGap() },
+      { label: 'Separador de escena (* * *)', kbd: keys('alt', 'S'), disabled: !RT.canWrite, onClick: () => this.insertSep() },
+      { label: 'Anotar una idea', kbd: keys('alt', 'N'), disabled: !RT.canWrite, onClick: () => Ideas.quick() },
       { label: 'Ir a…', kbd: keys('mod', 'K'), onClick: () => Pages.palette() },
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
@@ -243,6 +247,8 @@ const Editor = {
       else { const c = this.getCaret() || this.lastCaret; if (c) Review.reviewPara(this.cid, c.pid, true); }
       return;
     }
+    // estructura: hueco por escribir, separador de escena y salto de página
+    if (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyH' || e.code === 'KeyS' || e.key === 'Enter')) { e.preventDefault(); if (e.code === 'KeyH') this.insertGap(); else if (e.code === 'KeyS') this.insertSep(); else Pages.toggleBreak((this.getCaret() || this.lastCaret || {}).pid); return; }
     // diálogo: Alt + guion abre la línea con raya; Alt + I abre o cierra el inciso
     if (e.altKey && !mod && !e.shiftKey && window.Dialogo && (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'Slash' && /[-–]/.test(e.key) || e.code === 'KeyI')) { e.preventDefault(); if (e.code === 'KeyI') Dialogo.inciso(); else Dialogo.open(); return; }
     if (mod && !e.altKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) this.redo(); else this.undo(); return; }
@@ -353,6 +359,7 @@ const Editor = {
     const pe = document.createElement('p');
     pe.dataset.id = p.id;
     if (p.pb) pe.className = 'pb';
+    if (p.segs.length === 1 && p.segs[0].t != null && /^\s*(?:(?:\*\s*){3}|⁂|#)\s*$/.test(p.segs[0].t)) pe.classList.add('sep');
     p.segs.forEach(s => {
       if (s.t != null) pe.append(s.t);
       else if (s.m) {
@@ -549,6 +556,41 @@ const Editor = {
   },
 
   /* ---------- operaciones de párrafo ---------- */
+  /* Párrafo nuevo después del actual, con el contenido dado (segs). Devuelve su id. */
+  insertParaAfter(segs, extra) {
+    if (!RT.canWrite || !this.cdoc) return null;
+    const c = this.getCaret() || this.lastCaret; const i = c ? this.pIndex(c.pid) : this.cdoc.data.paras.length - 1;
+    this.pushUndo();
+    const np = Object.assign({ id: uid('p'), segs: segs }, extra || {});
+    const cur = this.cdoc.data.paras[i];
+    const empty = cur && !parText(cur).trim();
+    this.cdoc.update(d => { if (empty) d.paras[i] = Object.assign({}, np, { id: cur.id }); else d.paras.splice(i + 1, 0, np); }, { silent: true });
+    const id = empty ? cur.id : np.id;
+    this.addDirty(id);
+    this.render(); this.afterChange();
+    return id;
+  },
+  /* Hueco «por escribir»: un párrafo marcado como pendiente para rellenar después. */
+  insertGap() {
+    const m = { id: uid('m'), type: 'pend', text: '[por escribir]', note: 'Hueco por rellenar. Escribe dentro de los corchetes qué va aquí, o reemplázalo por el texto cuando lo tengas.', by: RT.me || 'local', at: Date.now(), gap: true };
+    const pid = this.insertParaAfter([{ m: m }]);
+    if (!pid) return;
+    // nuevo párrafo vacío después del hueco para seguir escribiendo
+    const i = this.pIndex(pid);
+    this.cdoc.update(d => { d.paras.splice(i + 1, 0, { id: uid('p'), segs: [] }); }, { silent: true });
+    this.render();
+    const nid = this.cdoc.data.paras[i + 1].id;
+    this.root.focus(); this.setCaret({ pid: nid, off: 0 });
+    App.toast('Hueco agregado. Aparece en «Ir a…» y en las notas como pendiente.', { id: 'gap' });
+  },
+  insertSep() {
+    const pid = this.insertParaAfter([{ t: '* * *' }]);
+    if (!pid) return;
+    const i = this.pIndex(pid);
+    this.cdoc.update(d => { d.paras.splice(i + 1, 0, { id: uid('p'), segs: [] }); }, { silent: true });
+    this.render();
+    this.root.focus(); this.setCaret({ pid: this.cdoc.data.paras[i + 1].id, off: 0 });
+  },
   splitAtCaret() {
     if (!RT.canWrite) return;
     if (!getSelection().isCollapsed) { document.execCommand('delete'); this.sync('deleteContentBackward'); }
