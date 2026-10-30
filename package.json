@@ -8,7 +8,7 @@
     "worker": "esbuild web/spell-worker.src.js --bundle --minify --format=iife --platform=browser --outfile=web/spell-worker.js",
     "dict": "node -e \"const fs=require('fs');const d='node_modules/dictionary-es/';fs.copyFileSync(d+'index.aff','web/dict/es.aff');fs.copyFileSync(d+'index.dic','web/dict/es.dic');fs.copyFileSync(d+'license','web/dict/LICENCIA.txt')\"",
     "serve": "python3 -m http.server 8000 --directory docs",
-    "test": "node test/unit.js && node test/web1.js && node test/web3.js && node test/web5.js && node test/web6.js"
+    "test": "node test/unit.js && node test/web1.js && node test/web3.js && node test/web5.js && node test/web6.js && node test/web7.js"
   },
   "devDependencies": {
     "dictionary-es": "4.0.0",

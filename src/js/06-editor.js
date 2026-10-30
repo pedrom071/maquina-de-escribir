@@ -47,7 +47,8 @@ const Editor = {
       role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto', 'data-ph': 'Empieza a escribir…', translate: 'no'
     });
     this.margin = h('div', { class: 'margin', id: 'margin', 'aria-label': 'Notas del corrector' });
-    this.paper.append(eyebrow, this.titleEl, this.root);
+    this.navEl = h('nav');
+    this.paper.append(eyebrow, this.titleEl, this.root, this.navEl);
     this.writeEl.append(this.paper, this.margin);
     stage.append(bar);
     if (RT.web && RT.canWrite && !AI.ready() && !App.prefs.aiBannerOff) {
@@ -60,7 +61,7 @@ const Editor = {
     stage.append(this.writeEl);
     this.bind();
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
-    this.ro = new ResizeObserver(() => { this.checkNarrow(); this.layoutSoon(); });
+    this.ro = new ResizeObserver(() => { this.checkNarrow(); this.layoutSoon(); if (window.Pages) Pages.layoutSoon(); });
     this.ro.observe(this.writeEl);
     this.checkNarrow();
     this.refreshHeader();
@@ -89,8 +90,10 @@ const Editor = {
   },
   refreshHeader() {
     if (!this.root) return;
-    const P = App.P(), k = kindOf(P), i = App.chIndex(this.cid), n = (P.chapters || []).length;
-    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = k.unit + ' ' + (i + 1) + ' de ' + n;
+    const P = App.P(), k = kindOf(P);
+    const c = App.chapterList().find(x => x.id === this.cid);
+    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
+    if (this.navEl) { const nn = Pages.navEl(); this.navEl.replaceWith(nn); this.navEl = nn; }
     if (document.activeElement !== this.titleEl) this.titleEl.value = App.chTitle(this.cid);
     const pstyle = (P.style && P.style.paragraph) || 'sangria';
     this.root.classList.toggle('sangria', pstyle === 'sangria'); this.root.classList.toggle('bloque', pstyle === 'bloque');
@@ -137,6 +140,7 @@ const Editor = {
     const items = [
       { header: 'Sin IA' },
       { label: 'Revisión rápida del ' + unit, onClick: () => Checker.chapter(this.cid) },
+      Pages.pages.length > 1 ? { label: 'Revisión rápida de esta página (' + Pages.cur + ')', onClick: () => Pages.reviewQuick() } : null,
       { label: 'Revisión rápida al escribir', checked: App.prefs.autoLocal !== false, keep: true, onClick: () => { App.prefs.autoLocal = App.prefs.autoLocal === false; App.savePrefs(); } },
       { sep: true },
       { header: RT.web ? 'Con IA' + (aiOk ? '' : ' (configúrala primero)') : 'Con Claude' }
@@ -145,6 +149,7 @@ const Editor = {
     UI.menu(a, items.concat([
       { label: 'Revisar este párrafo', kbd: MOD + '↵', onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
       { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: MOD + '⇧↵', disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
+      Pages.pages.length > 1 ? { label: 'Revisar esta página (' + Pages.cur + ')', onClick: () => Pages.reviewAI() } : null,
       { label: 'Revisar todo el ' + App.unit().toLowerCase(), onClick: () => Review.reviewChapter(this.cid) },
       { sep: true },
       { label: 'Informe del ' + App.unit().toLowerCase(), onClick: () => Review.report(this.cid) },
@@ -160,6 +165,10 @@ const Editor = {
   viewMenu(a) {
     const toggle = (k, after) => () => { App.prefs[k] = !App.prefs[k]; App.savePrefs(); after && after(); };
     UI.menu(a, [
+      { header: 'Hoja' },
+      { label: 'Hoja continua', checked: Pages.mode() === 'continuo', onClick: () => Pages.setMode('continuo') },
+      { label: 'Páginas numeradas', checked: Pages.mode() === 'paginas', onClick: () => Pages.setMode('paginas') },
+      { sep: true },
       { header: 'Mostrar' },
       { label: 'Ecos (palabras repetidas cerca)', checked: !!App.prefs.ecos, keep: true, onClick: toggle('ecos', () => this.applyHighlights()) },
       { label: 'Texto limpio, sin marcas', checked: !!App.prefs.clean, keep: true, onClick: toggle('clean', () => { document.body.classList.toggle('clean', App.prefs.clean); this.renderNotes(); this.applyHighlights(); }) },
@@ -175,6 +184,9 @@ const Editor = {
   moreMenu(a) {
     const items = [
       { label: 'Guardar una versión', kbd: MOD + 'S', disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
+      { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
+      { label: 'Ir a…', kbd: MOD + 'J', onClick: () => Pages.palette() },
+      { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
       { label: 'Exportar este ' + App.unit().toLowerCase(), onClick: () => IO.openExport(App.pid, this.cid) },
       { label: 'Crear documento en Claude Docs', disabled: !RT.docs, onClick: () => IO.toClaudeDocs(this.cid) }
@@ -335,6 +347,7 @@ const Editor = {
     d.paras.forEach(p => {
       const pe = document.createElement('p');
       pe.dataset.id = p.id;
+      if (p.pb) pe.className = 'pb';
       p.segs.forEach(s => {
         if (s.t != null) pe.append(s.t);
         else if (s.m) {
@@ -354,6 +367,7 @@ const Editor = {
     this.decorate();
     if (caret) this.setCaret(caret);
     this.renderNotes(); this.updateChips(); this.highlightsSoon();
+    if (window.Pages) Pages.layoutSoon();
     App.renderStatus();
   },
   renumber() {
@@ -388,6 +402,7 @@ const Editor = {
     const marks = new Map();
     allMarks(this.cdoc.data).forEach(x => marks.set(x.m.id, x.m));
     const used = new Set(), usedP = new Set(), out = [];
+    const oldP = new Map(this.cdoc.data.paras.map(p => [p.id, p]));
     const isBlock = (n) => n.nodeType === 1 && /^(P|DIV|H[1-6]|LI|UL|OL|BLOCKQUOTE|SECTION|ARTICLE|PRE)$/.test(n.nodeName);
     const fix = (t) => t.replace(/ /g, ' ').normalize('NFC');
     const walk = (node, segs) => {
@@ -409,7 +424,9 @@ const Editor = {
       if (!id || usedP.has(id)) id = uid('p');
       usedP.add(id);
       const segs = []; walk(el, segs);
-      return { id: id, segs: normSegs(segs) };
+      const o = { id: id, segs: normSegs(segs) };
+      const old = oldP.get(id); if (old && old.pb) o.pb = true;
+      return o;
     };
     let loose = null;
     const flush = () => { if (loose) { const segs = []; loose.forEach(n => { if (n.nodeType === 3) segs.push({ t: fix(n.nodeValue) }); else walk({ childNodes: [n] }, segs); }); const ns = normSegs(segs); if (ns.length) out.push({ id: uid('p'), segs: ns }); loose = null; } };
@@ -481,6 +498,7 @@ const Editor = {
   },
   afterChange() {
     this.sizeCheck();
+    if (window.Pages) Pages.layoutSoon();
     this.layoutSoon(); this.highlightsSoon();
     App.renderStatus(); App.statsSoon(); App.renderSideSoon();
     if (window.Collab) Collab.caretSoon();

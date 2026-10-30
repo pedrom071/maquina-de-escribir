@@ -470,16 +470,17 @@ const App = {
 
     const sec = h('div', { class: 'side-sec' });
     const hd = h('div', { class: 'hd' }, h('span', { class: 'label', text: k.units }));
-    if (RT.canWrite) hd.append(ibtn('plus', 'Agregar ' + k.unit.toLowerCase(), () => this.addChapter()));
+    if (RT.canWrite) hd.append(ibtn('plus', 'Agregar ' + k.unit.toLowerCase() + ' o sección', (e) => Pages.addMenu(e.currentTarget)));
     sec.append(hd);
     const list = h('div', { class: 'chlist' });
     (P.chapters || []).forEach((c, i) => {
       const d = this.ch(c.id);
       const w = d && d.data ? chapterWords(d.data) : null;
       const open = d && d.data ? allMarks(d.data).filter(x => !x.m.done && x.m.type !== 'bien').length : 0;
-      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') });
+      const role = Pages.role(c), num = role ? null : Pages.number(c.id);
+      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (role ? ' special' : '') });
       const go = h('button', { class: 'go', type: 'button', onclick: () => { this.go(this.chHash(c.id)); this.toggleSide(false); } },
-        h('span', { class: 'n', text: String(i + 1).padStart(2, '0') }), h('span', { class: 't', text: c.title || (k.unit + ' ' + (i + 1)) }),
+        h('span', { class: 'n', text: role ? '§' : String(num).padStart(2, '0'), title: role ? SPECIAL[role].l : '' }), h('span', { class: 't', text: c.title || (role ? SPECIAL[role].l : k.unit + ' ' + num) }),
         w != null ? h('span', { class: 'w', text: w >= 1000 ? (w / 1000).toFixed(1).replace('.', ',') + 'k' : String(w) }) : null);
       if (open) go.title = plural(open, 'nota abierta', 'notas abiertas');
       item.append(go);
@@ -534,6 +535,7 @@ const App = {
       const d = App.ch(App.cid);
       s.append(h('span', null, App.unit() + ': ', h('b', { text: fmtN(d && d.data ? chapterWords(d.data) : 0) })));
       if (Editor.selWords) s.append(h('span', null, 'Selección: ', h('b', { text: fmtN(Editor.selWords) })));
+      if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + MOD + ' J)', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
     }
     if (P) {
       s.append(h('span', null, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
@@ -548,11 +550,12 @@ const App = {
   addChapter(after) {
     const pd = this.proj(); if (!pd) return;
     const cid = uid('c'), k = kindOf(pd.data);
-    const title = k.unit + ' ' + ((pd.data.chapters || []).length + 1);
+    const title = k.unit + ' ' + ((pd.data.chapters || []).filter(c => !Pages.role(c)).length + 1);
     this.chapters.create(cid, { paras: [{ id: uid('p'), segs: [] }] });
     pd.update(x => {
       const i = after ? x.chapters.findIndex(c => c.id === after) : -1;
-      if (i >= 0) x.chapters.splice(i + 1, 0, { id: cid, title: title }); else x.chapters.push({ id: cid, title: title });
+      if (i >= 0) x.chapters.splice(i + 1, 0, { id: cid, title: title });
+      else { let j = x.chapters.length; while (j > 0 && Pages.role(x.chapters[j - 1]) && !SPECIAL[x.chapters[j - 1].role].front) j--; x.chapters.splice(j, 0, { id: cid, title: title }); }
     }, { now: true });
     this.go(this.chHash(cid));
     setTimeout(() => { const t = $('.ch-title'); if (t) { t.focus(); t.select(); } }, 120);
@@ -564,6 +567,7 @@ const App = {
       { label: 'Subir', disabled: i === 0, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j > 0) a.splice(j - 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Bajar', disabled: i === list.length - 1, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j >= 0 && j < a.length - 1) a.splice(j + 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Agregar después', onClick: () => this.addChapter(cid) },
+      { label: 'Tipo: ' + (Pages.role(list[i]) ? SPECIAL[list[i].role].l : 'normal (numerado)') + '…', onClick: () => setTimeout(() => Pages.roleMenu(anchor, cid), 30) },
       { label: 'Duplicar', onClick: () => this.duplicateChapter(cid) },
       { sep: true },
       { label: 'Historial de versiones', onClick: () => { this.go(this.chHash(cid)); setTimeout(() => Versions.open(cid), 80); } },

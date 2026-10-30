@@ -60,7 +60,7 @@ const IO = {
   collect(pid, cid) {
     const P = App.P();
     const list = cid ? App.chapterList().filter(c => c.id === cid) : App.chapterList();
-    return { P: P, chapters: list.map(c => { const d = App.ch(c.id); return { id: c.id, title: c.title || '', paras: d && d.data ? d.data.paras : [] }; }) };
+    return { P: P, chapters: list.map(c => { const d = App.ch(c.id); return { id: c.id, title: c.title || '', role: c.role || null, paras: d && d.data ? d.data.paras : [] }; }) };
   },
 
   /* ---------- exportar ---------- */
@@ -145,7 +145,7 @@ const IO = {
           else if (notes) { n++; s += '<mark>' + hesc(g.m.text) + '</mark><sup>' + n + '</sup>'; asides += '<aside><b>' + n + '.</b> ' + hesc(this.noteLabel(g.m)) + '</aside>'; }
           else s += hesc(g.m.text);
         });
-        body += '<p>' + s + '</p>' + asides + '\n';
+        body += (p.pb ? '<p style="break-before:page;text-indent:0">' : '<p>') + s + '</p>' + asides + '\n';
       });
     });
     return '<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + hesc(one ? chs[0].title : P.title) + '</title><style>body{max-width:42rem;margin:3rem auto;padding:0 1.2rem;font:1.1875rem/1.75 Georgia,"Times New Roman",serif;color:#2a221b;background:#fbf7ef}h1,h2{font-weight:400;text-align:center}h1{font-size:2.4rem;margin:2rem 0 3rem}h2{font-size:1.8rem;margin:4rem 0 2rem}p{margin:0}' + (pst === 'sangria' ? 'p+p{text-indent:1.6em}' : 'p+p{margin-top:.9em}') + 'mark{background:#f2dd9c}sup{font:600 .6em system-ui;color:#8a5c16}aside{font:.875rem/1.5 system-ui,sans-serif;color:#6b5e4e;border-left:3px solid #e2dacd;padding-left:.8rem;margin:.4rem 0 .8rem;text-indent:0}@media (prefers-color-scheme:dark){body{background:#171411;color:#eee6d8}mark{background:#5a4520;color:inherit}aside{color:#b5a893;border-color:#3a332c}}</style></head><body>\n' + body + '</body></html>\n';
@@ -173,7 +173,8 @@ const IO = {
           comments.push({ id: id, author: m.by === 'claude' ? 'Claude' : Editor.author(m.by), date: new Date(m.at || Date.now()).toISOString().replace(/\.\d+Z$/, 'Z'), lines: lines });
           inner += '<w:commentRangeStart w:id="' + id + '"/>' + run(m.text) + '<w:commentRangeEnd w:id="' + id + '"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="' + id + '"/></w:r>';
         });
-        body += para(first || (P.style && P.style.paragraph === 'bloque') ? 'SinSangria' : null, inner);
+        const pst = first || (P.style && P.style.paragraph === 'bloque') || p.pb ? 'SinSangria' : null;
+        body += p.pb ? '<w:p><w:pPr><w:pStyle w:val="SinSangria"/><w:pageBreakBefore/></w:pPr>' + inner + '</w:p>' : para(pst, inner);
         first = false;
       });
     });
