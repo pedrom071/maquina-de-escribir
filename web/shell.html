@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Editor, revisor y biblia para proyectos de escritura. Revisión sin IA incluida; con tu propia clave, revisión de coherencia con IA.">
+<meta name="theme-color" content="#E6DECD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0C0B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Máquina">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Máquina de escribir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/*CSS*/
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<div id="selbar" class="selbar" hidden role="toolbar" aria-label="Marcar la selección"></div>
+<div id="modal-root"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '/*VERSION*/';</script>
+<script>
+(function () {
+'use strict';
+/*JS*/
+App.init();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        var w = reg.installing; if (!w) return;
+        w.addEventListener('statechange', function () {
+          if (w.state === 'installed' && navigator.serviceWorker.controller && window.UI) {
+            UI.toast('Hay una versión nueva de la app.', { action: { label: 'Actualizar', fn: function () { w.postMessage('skip'); } }, ms: 20000 });
+          }
+        });
+      });
+    }).catch(function () {});
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (reloaded) return; reloaded = true; if (window.Store) Store.flushAll(); setTimeout(function () { location.reload(); }, 300); });
+  });
+}
+</script>
+</body>
+</html>

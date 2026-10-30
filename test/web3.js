@@ -1,0 +1,20 @@
+const { chromium } = require('playwright');
+const { spawn } = require('child_process');
+const path = require('path');
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+(async () => {
+  const srv = spawn('python3', ['-m', 'http.server', '8767', '--bind', '127.0.0.1'], { cwd: path.resolve(__dirname, '../docs'), stdio: 'ignore' });
+  await sleep(800);
+  const b = await chromium.launch(); const ctx = await b.newContext(); const pg = await ctx.newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('http://127.0.0.1:8767/'); await sleep(1000);
+  console.log('sw ready', await pg.evaluate(async () => { const r = await navigator.serviceWorker.ready; return !!r.active; }));
+  await sleep(1500);
+  await pg.evaluate(() => App.createProject('Sin conexión', 'cuento', 0, null, 'mine')); await sleep(1200);
+  srv.kill(); await ctx.setOffline(true); await sleep(300);
+  await pg.goto('http://127.0.0.1:8767/#'); await sleep(1500);
+  console.log('offline load', await pg.locator('.pcard:not(.new) h3').allTextContents());
+  console.log('spell works offline', await pg.evaluate(async () => { const r = await Spell.check(['tambien', 'casa'], []); return JSON.stringify(r); }));
+  console.log('ERR', errs);
+  await b.close();
+})();
