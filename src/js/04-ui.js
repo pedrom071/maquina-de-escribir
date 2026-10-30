@@ -3,6 +3,7 @@ const ICONS = {
   menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  metro: '<path d="M4 19h16M6 19v-4M9 19v-7M12 19v-4M15 19v-10M18 19v-4"/>',
   more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
   pen: '<path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/>',

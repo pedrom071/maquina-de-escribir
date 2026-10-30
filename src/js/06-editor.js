@@ -112,6 +112,7 @@ const Editor = {
     });
     const tools = h('div', { class: 'tools' });
     if (RT.canWrite) tools.append(btn([icon('spark'), h('span', { class: 'lbl', text: 'Revisar' })], (e) => this.reviewMenu(e.currentTarget), 'small'));
+    if ((App.P() || {}).kind === 'poesia') tools.append(btn([icon('metro'), h('span', { class: 'lbl', text: 'Métrica' })], () => Metrica.open(), 'small'));
     tools.append(btn([icon('eye'), h('span', { class: 'lbl', text: 'Ver' })], (e) => this.viewMenu(e.currentTarget), 'small'));
     tools.append(ibtn('clock', 'Historial de versiones', () => Versions.open(this.cid)));
     tools.append(ibtn('more', 'Más opciones', (e) => this.moreMenu(e.currentTarget)));
@@ -163,6 +164,9 @@ const Editor = {
       { label: 'Ecos (palabras repetidas cerca)', checked: !!App.prefs.ecos, keep: true, onClick: toggle('ecos', () => this.applyHighlights()) },
       { label: 'Texto limpio, sin marcas', checked: !!App.prefs.clean, keep: true, onClick: toggle('clean', () => { document.body.classList.toggle('clean', App.prefs.clean); this.renderNotes(); this.applyHighlights(); }) },
       { label: 'Ocultar notas resueltas', checked: !!App.prefs.hideDone, keep: true, onClick: toggle('hideDone', () => { this.decorate(); this.renderNotes(); }) },
+      { sep: true },
+      { label: 'Sílabas y rima al margen (métrica)', checked: Metrica.on(), keep: true, onClick: () => { App.prefs.metric = !Metrica.on(); App.savePrefs(); Metrica.decorate(); } },
+      { label: 'Medir versos…', onClick: () => Metrica.open() },
       { sep: true },
       { label: 'Ver todas las notas en lista', onClick: () => this.notesDrawer() },
       { label: 'Modo foco', kbd: MOD + '.', onClick: () => this.setFocus(true) }
@@ -834,7 +838,7 @@ const Editor = {
   },
 
   /* ---------- resaltados: ecos y búsqueda ---------- */
-  highlightsSoon: debounce(function () { Editor.applyHighlights(); }, 350),
+  highlightsSoon: debounce(function () { Editor.applyHighlights(); if (window.Metrica) Metrica.decorate(); }, 350),
   applyHighlights() {
     if (!this.root || !window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
     const ecos = [];

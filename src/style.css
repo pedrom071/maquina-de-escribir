@@ -561,3 +561,42 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 .style-guide dd{margin:0;color:var(--ink)}
 @media (max-width:640px){.style-guide dl{grid-template-columns:1fr}.style-guide dd{margin-bottom:.4rem}}
 .style-cell .k,.tile.has-tip .k{padding-right:1.2rem}
+
+/* ---------- métrica ---------- */
+.doc.show-met>p[data-met]::before{content:attr(data-met);position:absolute;right:100%;margin-right:1rem;top:.5em;font:500 .625rem/1 var(--f-mono);letter-spacing:.04em;color:var(--soft);white-space:nowrap;text-indent:0;user-select:none;-webkit-user-select:none;pointer-events:none}
+.doc.show-met>p.met-off[data-met]::before{color:var(--accent);font-weight:700}
+@media (max-width:860px){
+  .doc.show-met>p[data-met]::before{content:none}
+  .doc.show-met>p[data-met]::after{content:attr(data-met);font:500 .58rem/1 var(--f-mono);color:var(--soft);margin-left:.5rem;vertical-align:.2em;user-select:none;-webkit-user-select:none;pointer-events:none;white-space:nowrap}
+  .doc.show-met>p.met-off[data-met]::after{color:var(--accent);font-weight:700}
+}
+.met-panel{display:flex;flex-direction:column;gap:.9rem}
+.met-sum{display:flex;flex-direction:column;gap:.45rem;border:1px solid var(--line);border-radius:4px;padding:.8rem .9rem;background:var(--sheet)}
+.met-form b{display:block;font:400 1.45rem/1.15 var(--f-display)}
+.met-form span{display:block;font-size:.8125rem;color:var(--soft);margin-top:.2rem}
+.met-line{display:flex;gap:.6rem;font-size:.8438rem;padding-right:1.4rem}
+.met-line .k{flex:0 0 4.5rem;font:500 .6562rem/1.6 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.met-line .mono{font-family:var(--f-mono);letter-spacing:.08em}
+.met-line .tip-q{top:.15rem}
+.met-stanza{display:flex;flex-direction:column;gap:.15rem}
+.met-sh{display:flex;align-items:center;justify-content:space-between;font:500 .6562rem/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);padding:.2rem 0 .3rem;border-bottom:1px solid var(--line)}
+.met-sh b{font:600 .75rem var(--f-ui);letter-spacing:0;text-transform:none;color:var(--accent);padding-right:1.3rem}
+.met-sh .tip-q{top:50%;transform:translateY(-50%);right:0}
+.met-row{display:grid;grid-template-columns:2.2rem minmax(0,1fr) 1.6rem;gap:.6rem;align-items:start;padding:.5rem .2rem;border-bottom:1px dashed var(--line);cursor:pointer;border-radius:3px}
+.met-row:hover{background:var(--accent-soft)}
+.met-n{font:400 1.35rem/1 var(--f-display);font-variant-numeric:tabular-nums;text-align:center;padding-top:.1rem}
+.met-n .tip-q,.met-r .tip-q{display:none}
+.met-row.off .met-n{color:var(--accent);font-weight:600}
+.met-r{font:600 .9rem/1.6 var(--f-mono);text-align:center;color:var(--accent)}
+.met-v{font:400 1rem/1.4 var(--f-text)}
+.met-syl{font:400 .75rem/1.6 var(--f-mono);color:var(--soft)}
+.met-syl span{white-space:nowrap}
+.met-syl i{font-style:normal;opacity:.5}
+.met-syl .ms-a{color:var(--ink);font-weight:700}
+.met-syl .ms-s{text-decoration:underline dotted;text-underline-offset:.2em}
+.met-syl .ms-adj{font-style:normal;color:var(--accent)}
+.met-note{font-size:.75rem;color:var(--soft);margin-top:.15rem}
+.met-row.off .met-note{color:var(--accent)}
+.met-panel .tip{max-width:min(19rem,80vw)}
+
+.doc.show-met>p{text-indent:0!important}

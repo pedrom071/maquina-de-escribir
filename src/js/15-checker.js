@@ -49,7 +49,7 @@ const Checker = {
   on(P, rule) {
     const lv = this.level(P);
     const types = (P && P.review && P.review.types) || TKEYS;
-    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh', age: 'coh', dead: 'coh', noficha: 'coh', dur: 'coh', date: 'coh' }[rule];
+    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh', age: 'coh', dead: 'coh', noficha: 'coh', dur: 'coh', date: 'coh', metro: 'rec' }[rule];
     if (!types.includes(t)) return false;
     if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name', 'age', 'dead', 'date'].includes(rule);
     if (lv === 'normal') return !['mul', 'mente', 'gerund'].includes(rule);
@@ -174,6 +174,12 @@ const Checker = {
         add('rep', 'eco', w, '«' + before[before.length - 1].w + '» aparece muy cerca' + (before[before.length - 1].pid !== p.id ? ', en el párrafo anterior' : '') + '.');
       });
       COMODINES.forEach(cw => { const re2 = new RegExp('(?<![\\p{L}])' + cw + '(?![\\p{L}])', 'giu'); const ms = text.match(re2); if (ms && ms.length >= 3) { const k = text.search(re2); add('rec', 'eco', text.substr(k, cw.length), '«' + cw + '» aparece ' + ms.length + ' veces en este párrafo.'); } });
+    }
+    // métrica: versos que se apartan de la medida del poema (solo poesía)
+    if (P.kind === 'poesia' && window.Metrica && this.on(P, 'metro')) {
+      const r = Metrica.poem(paras.map(q => ({ pid: q.id, text: parText(q) })));
+      const v = r.verses.find(x => x.pid === p.id);
+      if (v && r.regular && !v.ok && r.verses.length >= 4 && text.trim().length) add('rec', 'metro', text.trim().length > 60 ? text.trim().slice(0, 60).replace(/\s+\S*$/, '') : text.trim(), 'Este verso mide ' + v.count + ' sílabas; el poema va en ' + r.allowed.map(c => MET_NAMES[c] || c + ' sílabas').join(' o ') + '.' + (v.lic ? ' Con ' + v.lic.join(' y ') + ' mediría ' + v.target + '.' : ''));
     }
     // coherencia con la biblia y dentro del capítulo (16-coherence.js)
     if (window.Coherence) Coherence.check(P, paras, i, text, add, r => this.on(P, r));
