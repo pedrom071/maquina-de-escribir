@@ -69,12 +69,22 @@ const Lectura = {
     const anchor = keep ? this.anchor() : null;
     const pr = this.prefs();
     const vw = window.innerWidth, vh = window.innerHeight;
-    const sp = pr.spread === 'auto' ? (vw >= 1050 && vw > vh ? 2 : 1) : +pr.spread;
+    // la hoja y la letra son las de tu apariencia (ancho de hoja, márgenes, tamaño e interlineado);
+    // si no caben, se reducen en la misma proporción
+    const probe = h('div', { style: 'position:absolute;visibility:hidden;width:var(--measure,46rem);padding-left:var(--pad-x,4rem);font-size:var(--text-size,19px)' });
+    document.body.append(probe);
+    const pcs = getComputedStyle(probe);
+    const sheetW = parseFloat(pcs.width) || 736, padX = parseFloat(pcs.paddingLeft) || 64, fsz = parseFloat(pcs.fontSize) || 19;
+    probe.remove();
+    const pad0 = Math.min(padX, Math.max(18, sheetW * 0.09));
+    const availW = vw - (vw < 700 ? 16 : 150), H = Math.max(320, vh - 150);
+    const sp = pr.spread === 'auto' ? (vw > vh && availW >= 2 * sheetW * 0.72 ? 2 : 1) : +pr.spread;
     this.spread = sp;
-    const H = Math.max(320, vh - 150);
-    let pageW = Math.min(Math.round(H / 1.42), Math.floor((vw - (vw < 700 ? 24 : 140)) / sp));
-    pageW = Math.max(260, pageW);
-    const pad = Math.round(Math.max(22, Math.min(56, pageW * 0.1)));
+    const sc = Math.min(1, availW / (sp * sheetW));
+    this.scale = sc;
+    const pageW = Math.max(240, Math.round(sheetW * sc));
+    const pad = Math.max(14, Math.round(pad0 * sc));
+    this.flow.style.fontSize = (fsz * sc).toFixed(2) + 'px';
     const cw = pageW - 2 * pad;
     this.stride = pageW;
     this.el.classList.toggle('spread', sp === 2);

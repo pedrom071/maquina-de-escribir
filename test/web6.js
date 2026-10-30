@@ -53,6 +53,9 @@ por no hacer mudanza en su costumbre.`;
   await pg.evaluate(() => Checker.run(App.cid)); await sleep(400);
   const metro = await pg.evaluate(() => MDE.allMarks(App.ch(App.cid).data).filter(x => x.m.rule === 'metro').map(x => x.m.note));
   ok(metro.length === 2 && /mide 10/.test(metro[0]), 'revisión rápida señala versos fuera de medida (' + metro.length + ')');
+  // poema breve en tetrasílabos (ejemplo inventado): esdrújula final resta una sílaba y asonancia común
+  const tet = await pg.evaluate(() => { const L = ['se respira', 'como sábanas', 'que transpiran', 'medicina', 'sin bencina', 'quién diría', 'algún día', 'una esquina', 'se avecina']; const x = Metrica.poem(L.map((t, i) => ({ pid: 'x' + i, text: t }))); return { name: x.whole.name, counts: x.verses.map(v => v.count).join('') }; });
+  ok(tet.counts === '444444444' && /tetrasílabos/.test(tet.name), 'tetrasílabos, con «como sábanas» = 5 − 1 = 4 (' + tet.counts + ')');
   ok(!errs.length, 'sin errores de página ' + errs.join(' | '));
   await b.close(); srv.kill();
   process.exit(fails ? 1 : 0);

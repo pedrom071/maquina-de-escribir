@@ -339,6 +339,15 @@ const Metrica = {
       sum.append(h('div', { class: 'met-form' }, h('b', { text: r.whole.name }), r.whole.why ? h('span', { text: r.whole.why }) : null));
       sum.append(tipify(h('div', { class: 'met-line' }, h('span', { class: 'k', text: 'Medidas' }), h('span', { text: fCount })), 'Cuántos versos hay de cada medida. Arte menor: hasta 8 sílabas; arte mayor: 9 o más.'));
       sum.append(tipify(h('div', { class: 'met-line' }, h('span', { class: 'k', text: 'Rima' }), h('span', { class: 'mono', text: r.stanzas.map(s => s.map(v => v.letter).join('')).join(' ') })), 'Esquema de rima: cada letra es una rima; mayúscula para versos de arte mayor y minúscula para arte menor. «–» es un verso suelto, sin rima con otro.'));
+      // sonoridad: asonancia dominante y familias de rima consonante
+      const af = new Map(), cf = new Map();
+      r.verses.forEach(v => { af.set(v.rhyme.ason, (af.get(v.rhyme.ason) || 0) + 1); if (v.rhyme.cons) cf.set(v.rhyme.cons, (cf.get(v.rhyme.cons) || 0) + 1); });
+      const topA = Array.from(af.entries()).sort((a, b) => b[1] - a[1])[0];
+      const fams = Array.from(cf.entries()).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+      if (topA && topA[1] >= Math.max(3, r.verses.length * 0.5)) {
+        const txt = topA[1] + ' de ' + r.verses.length + ' versos asuenan en ' + topA[0] + (fams.length ? ' · rima consonante en ' + fams.map(([c, n]) => '-' + c + ' (' + n + ')').join(', ') : '');
+        sum.append(tipify(h('div', { class: 'met-line' }, h('span', { class: 'k', text: 'Sonido' }), h('span', { text: txt })), 'Asonancia: versos que comparten las vocales desde la última sílaba acentuada (por ejemplo, «-ina» y «-ía» comparten i-a). Dentro de ella, las familias de rima consonante comparten todos los sonidos.'));
+      }
       body.append(sum);
       body.append(this.guide());
       r.stanzas.forEach((s, si) => {

@@ -32,7 +32,8 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   const st = await pg.evaluate(() => ({ spread: Lectura.spread, total: Lectura.total, idx: Lectura.idx, nums: document.querySelector('.rd-nums').innerText.replace(/\s+/g, ' ') }));
   console.log('    ', JSON.stringify(st));
   ok(st.spread === 2 && st.total > 4, 'doble página en pantalla ancha y varias páginas');
-  ok(st.idx > 0 && st.idx % 2 === 0, 'abre en el capítulo actual (después del prólogo)');
+  ok(await pg.evaluate((id) => { const br = document.querySelector('.rd-book').getBoundingClientRect(); const r = document.querySelector('.rd-flow section[data-cid="' + id + '"] h2').getBoundingClientRect(); return r.left >= br.left - 2 && r.right <= br.right + 2; }, c1), 'abre en el capítulo actual (después del prólogo)');
+  ok(await pg.evaluate(() => Math.abs(parseFloat(getComputedStyle(document.querySelector('.rd-flow')).fontSize) - 19 * Lectura.scale) < 0.6 && Lectura.scale > 0.7), 'letra y hoja proporcionales a tu apariencia (escala ' + await pg.evaluate(() => Lectura.scale.toFixed(2)) + ')');
   await pg.screenshot({ path: path.resolve(__dirname, '_lectura2.png') });
   await pg.keyboard.press('ArrowRight'); await sleep(700);
   ok(await pg.evaluate((i) => Lectura.idx === i + 2, st.idx), 'flecha derecha pasa a la doble página siguiente');

@@ -679,7 +679,7 @@ body.reading{overflow:hidden}
 .rd-book{position:relative;background:var(--sheet);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 14px 40px -12px rgba(0,0,0,.25);overflow:hidden;user-select:none;-webkit-user-select:none}
 .reader.spread .rd-book::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:60px;margin-left:-30px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.07) 45%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.07) 55%,transparent);pointer-events:none}
 .rd-clip{position:absolute;inset:0;overflow:hidden}
-.rd-flow{column-fill:auto;font:400 var(--text-size,1.12rem)/var(--leading,1.7) var(--f-text);color:var(--ink);will-change:transform;text-align:justify;-webkit-hyphens:auto;hyphens:auto}
+.rd-flow{column-fill:auto;font:400 var(--text-size,19px)/var(--leading,1.78) var(--f-text);color:var(--ink);will-change:transform;text-align:justify;-webkit-hyphens:auto;hyphens:auto}
 .rd-flow p{margin:0;text-indent:1.5em;orphans:2;widows:2}
 .rd-flow h2+p,.rd-flow .rd-eb+h2+p,.rd-flow p.rd-blank+p{text-indent:0}
 .reader.poesia .rd-flow{text-align:left;-webkit-hyphens:manual;hyphens:manual}
