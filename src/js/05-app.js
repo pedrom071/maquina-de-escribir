@@ -636,6 +636,7 @@ const App = {
         h('span', { class: 'muted', style: 'font-size:.75rem', text: 'Claude las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
       h('div', { class: 'field' }, h('span', { text: 'Qué marca' }), checks),
       h('label', { class: 'field' }, h('span', { text: 'Cantidad de marcas' }), dens),
+      (() => { const c = h('input', { type: 'checkbox', checked: rv.integrate !== false, disabled: ro }); c.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.integrate = c.checked; }, { now: true })); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: 'La IA confirma, corrige o descarta lo que marca la revisión automática (una sola lista, sin duplicados)' })); })(),
       h('div', { class: 'row' }, btn('Restaurar instrucciones de ' + k.label.toLowerCase(), () => { guide.value = k.guide; pd.update(x => { x.guide = k.guide; }, { now: true }); }, 'small', { disabled: ro }))));
 
     if (RT.canWrite) {

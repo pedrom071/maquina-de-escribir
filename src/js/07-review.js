@@ -121,6 +121,50 @@ const Review = {
     if (c === 'prompt_too_large') { App.toast('El texto es demasiado largo para revisarlo de una vez.'); return; }
     App.toast('La revisión no se completó. Intenta de nuevo.');
   },
+  integrate(P) { return !(P && P.review && P.review.integrate === false); },
+  /* Marcas de la revisión automática que la IA puede confirmar o descartar. */
+  autoObs(p, protectedIds, prefix) {
+    const out = [];
+    p.segs.forEach(s => { if (s.m && isStale(s.m, protectedIds, 'revisor')) out.push({ id: (prefix || '') + 'A' + (out.length + 1), m: s.m }); });
+    return out;
+  },
+  obsLines(obs) {
+    return obs.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '') + (o.m.fix && o.m.fix.to ? ' · corrección propuesta: «' + o.m.fix.to + '»' : '')).join('\n');
+  },
+  integrationRules() {
+    return [
+      'Antes que tú pasó una revisión automática por reglas (diccionario, puntuación, frases largas, ecos, muletillas). Sus observaciones vienen etiquetadas (A1, A2…). Son candidatas, no verdades:',
+      '- Si una es correcta, inclúyela en tu lista con el campo "auto" igual a su etiqueta; puedes mejorar la nota, cambiar el tipo o corregir la propuesta en "fix".',
+      '- Si es un falso positivo (nombre propio, chilenismo o palabra válida, repetición o estilo buscado por el autor, voz del narrador), simplemente no la incluyas: se descartará.',
+      '- Agrega además lo que la revisión automática no ve (coherencia, ambigüedad, voz).',
+      'Tu lista es la final y reemplaza a la automática.'
+    ].join('\n');
+  },
+  /* Reemplaza las marcas viejas del párrafo por la lista consolidada y recuerda lo descartado. */
+  applyList(x, pid, list, obs, P, protectedIds, integrate) {
+    const k = x.paras.findIndex(z => z.id === pid); if (k < 0) return { added: 0, removed: 0 };
+    const np = clone(x.paras[k]);
+    const stale = (m) => isStale(m, protectedIds) || (integrate && isStale(m, protectedIds, 'revisor'));
+    const removed = np.segs.filter(s => s.m && stale(s.m)).length;
+    np.segs = normSegs(np.segs.map(s => (s.m && stale(s.m)) ? { t: s.m.text } : s));
+    let added = 0; const used = new Set();
+    list.forEach(it => {
+      const ref = it && typeof it.auto === 'string' ? it.auto.trim().toUpperCase() : '';
+      const o = ref ? obs.find(z => z.id.toUpperCase() === ref) : null;
+      if (o) { used.add(o.id); if (!it.text) it.text = o.m.text; if (!it.type) it.type = o.m.type; if (it.fix == null && o.m.fix) it.fix = o.m.fix.to; }
+      if (this.insert(np, it, P, o)) added++;
+    });
+    if (integrate && obs.length) {
+      x.dismiss = x.dismiss || {};
+      const prev = x.dismiss[pid] || [];
+      const dis = obs.filter(o => !used.has(o.id)).map(o => ({ r: o.m.rule || '', t: o.m.text }));
+      x.dismiss[pid] = prev.concat(dis).slice(-40);
+      const words = obs.filter(o => !used.has(o.id) && o.m.rule === 'spell' && o.m.word).map(o => o.m.word);
+      if (words.length) x.okWords = Array.from(new Set((x.okWords || []).concat(words))).slice(-300);
+    }
+    x.paras[k] = np;
+    return { added: added, removed: removed };
+  },
   allowed(P) { const t = (P.review && P.review.types) || ['rep', 'dud', 'coh', 'bien', 'ort', 'rec']; return t.filter(x => TYPE_RULES[x]); },
   baseRules(P) {
     const k = kindOf(P);
@@ -143,13 +187,16 @@ const Review = {
     const prev = d.data.paras.slice(Math.max(0, i - 3), i).map(parText).join('\n\n').slice(-1800);
     const next = d.data.paras.slice(i + 1, i + 2).map(parText).join('\n\n').slice(0, 700);
     const protectedIds = protectedMarkIds(P);
-    const kept = p.segs.filter(s => s.m && !isStale(s.m, protectedIds)).map(s => s.m.text);
-    const maxN = DENSITY[(P.review && P.review.density) || 'normal'] || 5;
+    const integ = this.integrate(P);
+    const obs = integ ? this.autoObs(p, protectedIds) : [];
+    const kept = p.segs.filter(s => s.m && !isStale(s.m, protectedIds) && !(integ && isStale(s.m, protectedIds, 'revisor'))).map(s => s.m.text);
+    const maxN = (DENSITY[(P.review && P.review.density) || 'normal'] || 5) + obs.length;
     const bible = bibleDigest(P, 3500);
     const prompt = [
       this.baseRules(P),
-      'Revisa SOLO el párrafo indicado. Como máximo ' + maxN + ' marcas. No repitas estos fragmentos ya marcados: ' + JSON.stringify(kept) + '.',
-      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada"}]. Si no hay nada que marcar, responde [].',
+      'Revisa SOLO el párrafo indicado. Como máximo ' + maxN + ' marcas. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
+      obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
+      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
       next ? '\nTexto siguiente (contexto):\n' + next : '',
@@ -164,11 +211,7 @@ const Review = {
       let added = 0, removed = 0;
       if (cur) {
         const changedMeanwhile = parText(cur) !== full;
-        const np = clone(cur);
-        removed = np.segs.filter(s => s.m && isStale(s.m, protectedIds)).length;
-        np.segs = normSegs(np.segs.map(s => (s.m && isStale(s.m, protectedIds)) ? { t: s.m.text } : s));
-        list.slice(0, maxN).forEach(it => { if (this.insert(np, it, P)) added++; });
-        d.update(x => { const k = x.paras.findIndex(z => z.id === job.pid); if (k >= 0) x.paras[k] = np; }, { silent: true });
+        d.update(x => { const r = this.applyList(x, job.pid, list.slice(0, maxN), obs, P, protectedIds, integ); added = r.added; removed = r.removed; }, { silent: true });
         if (!changedMeanwhile) { const s = Editor.dirty.get(job.cid); if (s) s.delete(job.pid); }
       }
       this.running = null;
@@ -181,7 +224,7 @@ const Review = {
     }
     App.renderStatus();
   },
-  insert(p, it, P) {
+  insert(p, it, P, fromAuto) {
     if (!it || typeof it !== 'object') return false;
     const type = String(it.type || '');
     if (!TYPE_RULES[type] || !this.allowed(P).includes(type)) return false;
@@ -190,7 +233,8 @@ const Review = {
     const note = typeof it.note === 'string' ? it.note.trim().slice(0, 600) : '';
     const m = { id: uid('m'), type: type, text: '', note: note, by: 'claude', at: Date.now() };
     const fix = typeof it.fix === 'string' ? it.fix : '';
-    if (type === 'ort' && fix && fix !== text) m.fix = { from: text, to: fix, applied: false };
+    if ((type === 'ort' || fromAuto) && fix && fix !== text) m.fix = { from: text, to: fix, applied: false };
+    if (fromAuto) { m.src = 'auto'; if (fromAuto.m.rule) m.rule = fromAuto.m.rule; if (fromAuto.m.word) m.word = fromAuto.m.word; }
     if (insertMarkByText(p, text, m)) return true;
     const t2 = text.trim();
     if (t2 !== text && t2.length > 1) { if (m.fix) m.fix.from = t2; return insertMarkByText(p, t2, m); }
@@ -219,12 +263,16 @@ const Review = {
       for (let ci = 0; ci < chunks.length; ci++) {
         const ch = chunks[ci];
         const labels = new Map(); ch.forEach((p, i) => labels.set('P' + (i + 1), p.id));
-        const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p)).join('\n\n');
-        const maxT = Math.min(90, Math.max(4, Math.round(ch.length * per)));
+        const integ = this.integrate(P);
+        const obsBy = new Map(); let nObs = 0;
+        if (integ) ch.forEach((p, i) => { const o = this.autoObs(p, protectedIds, 'P' + (i + 1) + '.'); if (o.length) { obsBy.set(p.id, o); nObs += o.length; } });
+        const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p) + (obsBy.has(p.id) ? '\n  Observaciones automáticas:\n  ' + this.obsLines(obsBy.get(p.id)).replace(/\n/g, '\n  ') : '')).join('\n\n');
+        const maxT = Math.min(160, Math.max(4, Math.round(ch.length * per)) + nObs);
         const prompt = [
           this.baseRules(P),
           'Revisa todo el texto siguiente, párrafo por párrafo. Como máximo ' + maxT + ' marcas en total, priorizando lo más importante. Indica en "p" la etiqueta del párrafo.',
-          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"}]. Si no hay nada, responde [].',
+          nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
+          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body
         ].join('\n');
@@ -236,12 +284,8 @@ const Review = {
         list.forEach(it => { const pid = it && labels.get(String(it.p || '').trim().toUpperCase()); if (pid) { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(it); } });
         d.update(x => {
           ch.forEach(op => {
-            const k = x.paras.findIndex(z => z.id === op.id); if (k < 0) return;
-            const np = clone(x.paras[k]);
-            removed += np.segs.filter(s => s.m && isStale(s.m, protectedIds)).length;
-            np.segs = normSegs(np.segs.map(s => (s.m && isStale(s.m, protectedIds)) ? { t: s.m.text } : s));
-            (byPid.get(op.id) || []).forEach(it => { if (this.insert(np, it, P)) added++; });
-            x.paras[k] = np;
+            const r = this.applyList(x, op.id, byPid.get(op.id) || [], obsBy.get(op.id) || [], P, protectedIds, integ);
+            added += r.added; removed += r.removed;
           });
         }, { silent: true });
         this.afterMarks(cid);

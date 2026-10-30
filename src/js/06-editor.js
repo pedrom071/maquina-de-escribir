@@ -633,7 +633,7 @@ const Editor = {
   noteEl(m, inSheet) {
     const el = h('div', { class: 'note ' + m.type + (m.done ? ' done' : '') + (m.id === this.active ? ' active' : ''), dataset: { id: m.id }, tabindex: '0' });
     const num = $('.m[data-id="' + CSS.escape(m.id) + '"]', this.root);
-    const head = h('div', { class: 'nhead' }, h('span', { text: TYPES[m.type].g }), h('span', { text: (num ? num.dataset.n + ' · ' : '') + TYPES[m.type].l + (m.done ? ' · resuelta' : '') }), h('span', { class: 'who', text: this.author(m.by) + (m.at ? ' · ' + relTime(m.at) : '') }));
+    const head = h('div', { class: 'nhead' }, h('span', { text: TYPES[m.type].g }), h('span', { text: (num ? num.dataset.n + ' · ' : '') + TYPES[m.type].l + (m.done ? ' · resuelta' : '') }), h('span', { class: 'who', text: this.author(m.by) + (m.src === 'auto' ? ' ✓ automática' : '') + (m.at ? ' · ' + relTime(m.at) : ''), title: m.src === 'auto' ? 'Marcada por la revisión automática y confirmada por la IA' : null }));
     if (m.id === this.active || inSheet) head.append(h('button', { class: 'nclose', type: 'button', dataset: { a: 'close', id: m.id }, 'aria-label': 'Cerrar nota', title: 'Cerrar (Esc)' }, icon('close')));
     el.append(head);
     const k = 'n-' + m.id;

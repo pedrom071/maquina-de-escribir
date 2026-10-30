@@ -49,10 +49,10 @@ const Checker = {
   on(P, rule) {
     const lv = this.level(P);
     const types = (P && P.review && P.review.types) || TKEYS;
-    const t = { spell: 'ort', dup: 'ort', punct: 'ort', long: 'dud', eco: 'rep', mul: 'rec', mente: 'rec', name: 'coh' }[rule];
+    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh' }[rule];
     if (!types.includes(t)) return false;
-    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'name'].includes(rule);
-    if (lv === 'normal') return rule !== 'mul' && rule !== 'mente';
+    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name'].includes(rule);
+    if (lv === 'normal') return !['mul', 'mente', 'gerund'].includes(rule);
     return true;
   },
   /* Devuelve propuestas {type, text, note, fix, rule, word} para un párrafo. */
@@ -80,6 +80,62 @@ const Checker = {
         if (/\?["»”)]?$/.test(q) && q.indexOf('¿') < 0) { const w = q.match(/(\S+\s+)?\S+\?["»”)]?$/); if (w) add('ort', 'punct', w[0], 'Falta el signo de apertura «¿».'); }
         if (/![»”")]?$/.test(q) && q.indexOf('¡') < 0) { const w = q.match(/(\S+\s+)?\S+![»”")]?$/); if (w) add('ort', 'punct', w[0], 'Falta el signo de apertura «¡».'); }
       });
+    }
+    // tildes que el diccionario no ve: interrogativos, pronombres, «sé»
+    if (this.on(P, 'tilde')) {
+      let m;
+      const INT = { que: 'qué', como: 'cómo', donde: 'dónde', cuando: 'cuándo', cual: 'cuál', cuales: 'cuáles', quien: 'quién', quienes: 'quiénes', cuanto: 'cuánto', cuanta: 'cuánta', cuantos: 'cuántos', cuantas: 'cuántas', porque: 'por qué' };
+      const r1 = /([¿¡])\s*(que|como|donde|cuando|cual|cuales|quien|quienes|cuanto|cuanta|cuantos|cuantas|porque)(?![\p{L}])/giu;
+      while ((m = r1.exec(text))) { const w = m[2], fx = INT[w.toLowerCase()]; const fix = /^\p{Lu}/u.test(w) ? fx[0].toUpperCase() + fx.slice(1) : fx; add('ort', 'tilde', m[0], 'En pregunta o exclamación lleva tilde: «' + fix + '».', m[1] + fix); }
+      const r2 = /(?<![\p{L}])([Ee]l)\s+(dijo|era|estaba|fue|tenía|tenia|sabía|quería|pensó|miró|había|habia|es|está|tiene|sabe|quiere|vino|llegó|preguntó|respondió|sonrió|también|mismo)(?![\p{L}])/gu;
+      while ((m = r2.exec(text))) { const fix = (m[1] === 'El' ? 'Él' : 'él') + ' ' + m[2]; add('ort', 'tilde', m[0], 'Si es pronombre («él»), lleva tilde.', fix); }
+      const r3 = /(?<![\p{L}])([Tt]u)\s+(eres|tienes|sabes|quieres|estás|estabas|eras|dijiste|puedes|vas)(?![\p{L}])/gu;
+      while ((m = r3.exec(text))) add('ort', 'tilde', m[0], 'Pronombre personal: «tú».', (m[1] === 'Tu' ? 'Tú' : 'tú') + ' ' + m[2]);
+      const r4 = /(?<![\p{L}])((?:[Yy]o|[Nn]o)\s+)se(\s+(?:si|qué|que|cómo|nada|bien|mucho|dónde|cuándo|quién))(?![\p{L}])/gu;
+      while ((m = r4.exec(text))) add('ort', 'tilde', m[0], 'Del verbo saber: «sé».', m[1] + 'sé' + m[2]);
+    }
+    // dequeísmo y queísmo frecuentes
+    if (this.on(P, 'dequeismo')) {
+      let m;
+      const r1 = /(?<![\p{L}])((?:pienso|piensa|pensaba|creo|cree|creía|opino|opina|dijo|dije|digo|considero|supongo|parece|resulta|es obvio|es posible)) de que(?![\p{L}])/giu;
+      while ((m = r1.exec(text))) add('ort', 'dequeismo', m[0], 'Dequeísmo: sobra «de».', m[1] + ' que');
+      const r2 = /(?<![\p{L}])((?:me di cuenta|se dio cuenta|te diste cuenta|estoy seguro|estaba seguro|está seguro|estoy segura|estaba segura|a pesar|me acuerdo|se acordó|me olvidé|tengo la certeza|con tal|en caso)) que(?![\p{L}])/giu;
+      while ((m = r2.exec(text))) add('ort', 'dequeismo', m[0], 'Queísmo: falta «de».', m[1] + ' de que');
+    }
+    // diálogos con guion corto, mayúscula tras punto, signos sin cerrar
+    if (this.on(P, 'dial')) {
+      const m = text.match(/^\s*(-{1,2})\s*\S+/);
+      if (m) add('ort', 'dial', m[0].trim(), 'En diálogos se usa raya (—), no guion.', m[0].trim().replace(/^-{1,2}\s*/, '—'));
+    }
+    if (this.on(P, 'caps')) {
+      let m; const r = /([.!?…]["»”]?\s+)([\p{Ll}][\p{Ll}]+)/gu;
+      while ((m = r.exec(text))) { if (/\b(?:Sr|Sra|Dr|Dra|etc|pág|p)\.\s+$/i.test(text.slice(Math.max(0, m.index - 6), m.index + m[1].length))) continue; if (/…\s+$/.test(m[1])) continue; add('ort', 'caps', m[2], 'Después de punto va mayúscula.', m[2][0].toUpperCase() + m[2].slice(1)); }
+      if (/\.{4,}/.test(text)) { const k = text.match(/\S*\.{4,}/)[0]; add('ort', 'caps', k, 'Los puntos suspensivos son tres.', k.replace(/\.{4,}/, '...')); }
+    }
+    if (this.on(P, 'balance')) {
+      const pairs = [['«', '»'], ['(', ')'], ['“', '”']];
+      pairs.forEach(([a, b]) => {
+        const na = text.split(a).length - 1, nb = text.split(b).length - 1;
+        if (na !== nb) { const i2 = na > nb ? text.lastIndexOf(a) : text.lastIndexOf(b); const frag = (text.slice(i2).match(/^\S+(?:\s+\S+)?/) || [a])[0]; add('ort', 'balance', frag, 'Hay un «' + (na > nb ? a : b) + '» sin su pareja «' + (na > nb ? b : a) + '».'); }
+      });
+      const q = (text.match(/"/g) || []).length;
+      if (q % 2) { const i2 = text.lastIndexOf('"'); add('ort', 'balance', (text.slice(i2).match(/^\S+/) || ['"'])[0], 'Hay comillas sin cerrar.'); }
+    }
+    // inicios de frase repetidos
+    if (this.on(P, 'starts')) {
+      const ss = sentences(text); let run = 1;
+      for (let k = 1; k < ss.length; k++) {
+        const a = fold((ss[k - 1].match(/[\p{L}]+/u) || [''])[0]), b = fold((ss[k].match(/[\p{L}]+/u) || [''])[0]);
+        if (a && a === b && a.length > 1 && !['y'].includes(a)) { run++; if (run === 3) { const w = ss[k].match(/^\s*[«"“¿¡—]?\s*[\p{L}]+/u); if (w) add('rep', 'starts', w[0].trim(), 'Tres frases seguidas empiezan con «' + (ss[k].match(/[\p{L}]+/u) || [''])[0] + '».'); } }
+        else run = 1;
+      }
+    }
+    if (this.on(P, 'gerund')) {
+      sentences(text).forEach(s2 => { const g = s2.match(/[\p{L}]+(?:ando|iendo|yendo)\b/gu); if (g && g.length >= 3) add('rec', 'gerund', g[2], g.length + ' gerundios en la misma frase; puede volverse pesada.'); });
+    }
+    if (this.on(P, 'longpar')) {
+      const n = countWords(text);
+      if (n > 260) { const head = (text.match(/^\s*(\S+\s+){0,4}\S+/) || [''])[0].trim(); add('dud', 'longpar', head, 'Párrafo de ' + n + ' palabras. Si mezcla varias ideas, podría dividirse.'); }
     }
     // frases largas
     if (this.on(P, 'long')) {
@@ -135,7 +191,7 @@ const Checker = {
       });
     }
     if (this.on(P, 'spell') && Spell.available()) {
-      const own = new Set((P.dictionary || []).concat(Spell.userWords()));
+      const own = new Set((P.dictionary || []).concat(Spell.userWords(), (this._ok || [])));
       const words = Array.from(new Set(toks.filter(t => {
         if (t.w.length < 2 || own.has(t.w) || own.has(t.w.toLowerCase()) || nameSet.has(t.w)) return false;
         if (/^\p{Lu}/u.test(t.w) && !t.start) return false;
@@ -166,9 +222,13 @@ const Checker = {
     const ids = pids || paras.map(p => p.id);
     const protectedIds = protectedMarkIds(P);
     const results = new Map();
+    this._ok = d.data.okWords || [];
+    const dis = d.data.dismiss || {};
     for (const pid of ids) {
       const i = paras.findIndex(p => p.id === pid); if (i < 0) continue;
-      results.set(pid, { text: parText(paras[i]), items: await this.analyze(P, paras, i) });
+      const skip = dis[pid] || [];
+      const items = (await this.analyze(P, paras, i)).filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
+      results.set(pid, { text: parText(paras[i]), items: items });
     }
     let added = 0, removed = 0;
     const cur = App.ch(cid); if (!cur || !cur.data) return 0;

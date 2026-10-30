@@ -521,7 +521,7 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '1ac115cd52';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '5f843cfb09';</script>
 <script>
 (function () {
 'use strict';
@@ -2291,6 +2291,7 @@ const App = {
         h('span', { class: 'muted', style: 'font-size:.75rem', text: 'Claude las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
       h('div', { class: 'field' }, h('span', { text: 'Qué marca' }), checks),
       h('label', { class: 'field' }, h('span', { text: 'Cantidad de marcas' }), dens),
+      (() => { const c = h('input', { type: 'checkbox', checked: rv.integrate !== false, disabled: ro }); c.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.integrate = c.checked; }, { now: true })); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: 'La IA confirma, corrige o descarta lo que marca la revisión automática (una sola lista, sin duplicados)' })); })(),
       h('div', { class: 'row' }, btn('Restaurar instrucciones de ' + k.label.toLowerCase(), () => { guide.value = k.guide; pd.update(x => { x.guide = k.guide; }, { now: true }); }, 'small', { disabled: ro }))));
 
     if (RT.canWrite) {
@@ -2982,7 +2983,7 @@ const Editor = {
   noteEl(m, inSheet) {
     const el = h('div', { class: 'note ' + m.type + (m.done ? ' done' : '') + (m.id === this.active ? ' active' : ''), dataset: { id: m.id }, tabindex: '0' });
     const num = $('.m[data-id="' + CSS.escape(m.id) + '"]', this.root);
-    const head = h('div', { class: 'nhead' }, h('span', { text: TYPES[m.type].g }), h('span', { text: (num ? num.dataset.n + ' · ' : '') + TYPES[m.type].l + (m.done ? ' · resuelta' : '') }), h('span', { class: 'who', text: this.author(m.by) + (m.at ? ' · ' + relTime(m.at) : '') }));
+    const head = h('div', { class: 'nhead' }, h('span', { text: TYPES[m.type].g }), h('span', { text: (num ? num.dataset.n + ' · ' : '') + TYPES[m.type].l + (m.done ? ' · resuelta' : '') }), h('span', { class: 'who', text: this.author(m.by) + (m.src === 'auto' ? ' ✓ automática' : '') + (m.at ? ' · ' + relTime(m.at) : ''), title: m.src === 'auto' ? 'Marcada por la revisión automática y confirmada por la IA' : null }));
     if (m.id === this.active || inSheet) head.append(h('button', { class: 'nclose', type: 'button', dataset: { a: 'close', id: m.id }, 'aria-label': 'Cerrar nota', title: 'Cerrar (Esc)' }, icon('close')));
     el.append(head);
     const k = 'n-' + m.id;
@@ -3346,6 +3347,50 @@ const Review = {
     if (c === 'prompt_too_large') { App.toast('El texto es demasiado largo para revisarlo de una vez.'); return; }
     App.toast('La revisión no se completó. Intenta de nuevo.');
   },
+  integrate(P) { return !(P && P.review && P.review.integrate === false); },
+  /* Marcas de la revisión automática que la IA puede confirmar o descartar. */
+  autoObs(p, protectedIds, prefix) {
+    const out = [];
+    p.segs.forEach(s => { if (s.m && isStale(s.m, protectedIds, 'revisor')) out.push({ id: (prefix || '') + 'A' + (out.length + 1), m: s.m }); });
+    return out;
+  },
+  obsLines(obs) {
+    return obs.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '') + (o.m.fix && o.m.fix.to ? ' · corrección propuesta: «' + o.m.fix.to + '»' : '')).join('\n');
+  },
+  integrationRules() {
+    return [
+      'Antes que tú pasó una revisión automática por reglas (diccionario, puntuación, frases largas, ecos, muletillas). Sus observaciones vienen etiquetadas (A1, A2…). Son candidatas, no verdades:',
+      '- Si una es correcta, inclúyela en tu lista con el campo "auto" igual a su etiqueta; puedes mejorar la nota, cambiar el tipo o corregir la propuesta en "fix".',
+      '- Si es un falso positivo (nombre propio, chilenismo o palabra válida, repetición o estilo buscado por el autor, voz del narrador), simplemente no la incluyas: se descartará.',
+      '- Agrega además lo que la revisión automática no ve (coherencia, ambigüedad, voz).',
+      'Tu lista es la final y reemplaza a la automática.'
+    ].join('\n');
+  },
+  /* Reemplaza las marcas viejas del párrafo por la lista consolidada y recuerda lo descartado. */
+  applyList(x, pid, list, obs, P, protectedIds, integrate) {
+    const k = x.paras.findIndex(z => z.id === pid); if (k < 0) return { added: 0, removed: 0 };
+    const np = clone(x.paras[k]);
+    const stale = (m) => isStale(m, protectedIds) || (integrate && isStale(m, protectedIds, 'revisor'));
+    const removed = np.segs.filter(s => s.m && stale(s.m)).length;
+    np.segs = normSegs(np.segs.map(s => (s.m && stale(s.m)) ? { t: s.m.text } : s));
+    let added = 0; const used = new Set();
+    list.forEach(it => {
+      const ref = it && typeof it.auto === 'string' ? it.auto.trim().toUpperCase() : '';
+      const o = ref ? obs.find(z => z.id.toUpperCase() === ref) : null;
+      if (o) { used.add(o.id); if (!it.text) it.text = o.m.text; if (!it.type) it.type = o.m.type; if (it.fix == null && o.m.fix) it.fix = o.m.fix.to; }
+      if (this.insert(np, it, P, o)) added++;
+    });
+    if (integrate && obs.length) {
+      x.dismiss = x.dismiss || {};
+      const prev = x.dismiss[pid] || [];
+      const dis = obs.filter(o => !used.has(o.id)).map(o => ({ r: o.m.rule || '', t: o.m.text }));
+      x.dismiss[pid] = prev.concat(dis).slice(-40);
+      const words = obs.filter(o => !used.has(o.id) && o.m.rule === 'spell' && o.m.word).map(o => o.m.word);
+      if (words.length) x.okWords = Array.from(new Set((x.okWords || []).concat(words))).slice(-300);
+    }
+    x.paras[k] = np;
+    return { added: added, removed: removed };
+  },
   allowed(P) { const t = (P.review && P.review.types) || ['rep', 'dud', 'coh', 'bien', 'ort', 'rec']; return t.filter(x => TYPE_RULES[x]); },
   baseRules(P) {
     const k = kindOf(P);
@@ -3368,13 +3413,16 @@ const Review = {
     const prev = d.data.paras.slice(Math.max(0, i - 3), i).map(parText).join('\n\n').slice(-1800);
     const next = d.data.paras.slice(i + 1, i + 2).map(parText).join('\n\n').slice(0, 700);
     const protectedIds = protectedMarkIds(P);
-    const kept = p.segs.filter(s => s.m && !isStale(s.m, protectedIds)).map(s => s.m.text);
-    const maxN = DENSITY[(P.review && P.review.density) || 'normal'] || 5;
+    const integ = this.integrate(P);
+    const obs = integ ? this.autoObs(p, protectedIds) : [];
+    const kept = p.segs.filter(s => s.m && !isStale(s.m, protectedIds) && !(integ && isStale(s.m, protectedIds, 'revisor'))).map(s => s.m.text);
+    const maxN = (DENSITY[(P.review && P.review.density) || 'normal'] || 5) + obs.length;
     const bible = bibleDigest(P, 3500);
     const prompt = [
       this.baseRules(P),
-      'Revisa SOLO el párrafo indicado. Como máximo ' + maxN + ' marcas. No repitas estos fragmentos ya marcados: ' + JSON.stringify(kept) + '.',
-      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada"}]. Si no hay nada que marcar, responde [].',
+      'Revisa SOLO el párrafo indicado. Como máximo ' + maxN + ' marcas. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
+      obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
+      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
       next ? '\nTexto siguiente (contexto):\n' + next : '',
@@ -3389,11 +3437,7 @@ const Review = {
       let added = 0, removed = 0;
       if (cur) {
         const changedMeanwhile = parText(cur) !== full;
-        const np = clone(cur);
-        removed = np.segs.filter(s => s.m && isStale(s.m, protectedIds)).length;
-        np.segs = normSegs(np.segs.map(s => (s.m && isStale(s.m, protectedIds)) ? { t: s.m.text } : s));
-        list.slice(0, maxN).forEach(it => { if (this.insert(np, it, P)) added++; });
-        d.update(x => { const k = x.paras.findIndex(z => z.id === job.pid); if (k >= 0) x.paras[k] = np; }, { silent: true });
+        d.update(x => { const r = this.applyList(x, job.pid, list.slice(0, maxN), obs, P, protectedIds, integ); added = r.added; removed = r.removed; }, { silent: true });
         if (!changedMeanwhile) { const s = Editor.dirty.get(job.cid); if (s) s.delete(job.pid); }
       }
       this.running = null;
@@ -3406,7 +3450,7 @@ const Review = {
     }
     App.renderStatus();
   },
-  insert(p, it, P) {
+  insert(p, it, P, fromAuto) {
     if (!it || typeof it !== 'object') return false;
     const type = String(it.type || '');
     if (!TYPE_RULES[type] || !this.allowed(P).includes(type)) return false;
@@ -3415,7 +3459,8 @@ const Review = {
     const note = typeof it.note === 'string' ? it.note.trim().slice(0, 600) : '';
     const m = { id: uid('m'), type: type, text: '', note: note, by: 'claude', at: Date.now() };
     const fix = typeof it.fix === 'string' ? it.fix : '';
-    if (type === 'ort' && fix && fix !== text) m.fix = { from: text, to: fix, applied: false };
+    if ((type === 'ort' || fromAuto) && fix && fix !== text) m.fix = { from: text, to: fix, applied: false };
+    if (fromAuto) { m.src = 'auto'; if (fromAuto.m.rule) m.rule = fromAuto.m.rule; if (fromAuto.m.word) m.word = fromAuto.m.word; }
     if (insertMarkByText(p, text, m)) return true;
     const t2 = text.trim();
     if (t2 !== text && t2.length > 1) { if (m.fix) m.fix.from = t2; return insertMarkByText(p, t2, m); }
@@ -3444,12 +3489,16 @@ const Review = {
       for (let ci = 0; ci < chunks.length; ci++) {
         const ch = chunks[ci];
         const labels = new Map(); ch.forEach((p, i) => labels.set('P' + (i + 1), p.id));
-        const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p)).join('\n\n');
-        const maxT = Math.min(90, Math.max(4, Math.round(ch.length * per)));
+        const integ = this.integrate(P);
+        const obsBy = new Map(); let nObs = 0;
+        if (integ) ch.forEach((p, i) => { const o = this.autoObs(p, protectedIds, 'P' + (i + 1) + '.'); if (o.length) { obsBy.set(p.id, o); nObs += o.length; } });
+        const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p) + (obsBy.has(p.id) ? '\n  Observaciones automáticas:\n  ' + this.obsLines(obsBy.get(p.id)).replace(/\n/g, '\n  ') : '')).join('\n\n');
+        const maxT = Math.min(160, Math.max(4, Math.round(ch.length * per)) + nObs);
         const prompt = [
           this.baseRules(P),
           'Revisa todo el texto siguiente, párrafo por párrafo. Como máximo ' + maxT + ' marcas en total, priorizando lo más importante. Indica en "p" la etiqueta del párrafo.',
-          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"}]. Si no hay nada, responde [].',
+          nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
+          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body
         ].join('\n');
@@ -3461,12 +3510,8 @@ const Review = {
         list.forEach(it => { const pid = it && labels.get(String(it.p || '').trim().toUpperCase()); if (pid) { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(it); } });
         d.update(x => {
           ch.forEach(op => {
-            const k = x.paras.findIndex(z => z.id === op.id); if (k < 0) return;
-            const np = clone(x.paras[k]);
-            removed += np.segs.filter(s => s.m && isStale(s.m, protectedIds)).length;
-            np.segs = normSegs(np.segs.map(s => (s.m && isStale(s.m, protectedIds)) ? { t: s.m.text } : s));
-            (byPid.get(op.id) || []).forEach(it => { if (this.insert(np, it, P)) added++; });
-            x.paras[k] = np;
+            const r = this.applyList(x, op.id, byPid.get(op.id) || [], obsBy.get(op.id) || [], P, protectedIds, integ);
+            added += r.added; removed += r.removed;
           });
         }, { silent: true });
         this.afterMarks(cid);
@@ -5201,10 +5246,10 @@ const Checker = {
   on(P, rule) {
     const lv = this.level(P);
     const types = (P && P.review && P.review.types) || TKEYS;
-    const t = { spell: 'ort', dup: 'ort', punct: 'ort', long: 'dud', eco: 'rep', mul: 'rec', mente: 'rec', name: 'coh' }[rule];
+    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh' }[rule];
     if (!types.includes(t)) return false;
-    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'name'].includes(rule);
-    if (lv === 'normal') return rule !== 'mul' && rule !== 'mente';
+    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name'].includes(rule);
+    if (lv === 'normal') return !['mul', 'mente', 'gerund'].includes(rule);
     return true;
   },
   /* Devuelve propuestas {type, text, note, fix, rule, word} para un párrafo. */
@@ -5232,6 +5277,62 @@ const Checker = {
         if (/\?["»”)]?$/.test(q) && q.indexOf('¿') < 0) { const w = q.match(/(\S+\s+)?\S+\?["»”)]?$/); if (w) add('ort', 'punct', w[0], 'Falta el signo de apertura «¿».'); }
         if (/![»”")]?$/.test(q) && q.indexOf('¡') < 0) { const w = q.match(/(\S+\s+)?\S+![»”")]?$/); if (w) add('ort', 'punct', w[0], 'Falta el signo de apertura «¡».'); }
       });
+    }
+    // tildes que el diccionario no ve: interrogativos, pronombres, «sé»
+    if (this.on(P, 'tilde')) {
+      let m;
+      const INT = { que: 'qué', como: 'cómo', donde: 'dónde', cuando: 'cuándo', cual: 'cuál', cuales: 'cuáles', quien: 'quién', quienes: 'quiénes', cuanto: 'cuánto', cuanta: 'cuánta', cuantos: 'cuántos', cuantas: 'cuántas', porque: 'por qué' };
+      const r1 = /([¿¡])\s*(que|como|donde|cuando|cual|cuales|quien|quienes|cuanto|cuanta|cuantos|cuantas|porque)(?![\p{L}])/giu;
+      while ((m = r1.exec(text))) { const w = m[2], fx = INT[w.toLowerCase()]; const fix = /^\p{Lu}/u.test(w) ? fx[0].toUpperCase() + fx.slice(1) : fx; add('ort', 'tilde', m[0], 'En pregunta o exclamación lleva tilde: «' + fix + '».', m[1] + fix); }
+      const r2 = /(?<![\p{L}])([Ee]l)\s+(dijo|era|estaba|fue|tenía|tenia|sabía|quería|pensó|miró|había|habia|es|está|tiene|sabe|quiere|vino|llegó|preguntó|respondió|sonrió|también|mismo)(?![\p{L}])/gu;
+      while ((m = r2.exec(text))) { const fix = (m[1] === 'El' ? 'Él' : 'él') + ' ' + m[2]; add('ort', 'tilde', m[0], 'Si es pronombre («él»), lleva tilde.', fix); }
+      const r3 = /(?<![\p{L}])([Tt]u)\s+(eres|tienes|sabes|quieres|estás|estabas|eras|dijiste|puedes|vas)(?![\p{L}])/gu;
+      while ((m = r3.exec(text))) add('ort', 'tilde', m[0], 'Pronombre personal: «tú».', (m[1] === 'Tu' ? 'Tú' : 'tú') + ' ' + m[2]);
+      const r4 = /(?<![\p{L}])((?:[Yy]o|[Nn]o)\s+)se(\s+(?:si|qué|que|cómo|nada|bien|mucho|dónde|cuándo|quién))(?![\p{L}])/gu;
+      while ((m = r4.exec(text))) add('ort', 'tilde', m[0], 'Del verbo saber: «sé».', m[1] + 'sé' + m[2]);
+    }
+    // dequeísmo y queísmo frecuentes
+    if (this.on(P, 'dequeismo')) {
+      let m;
+      const r1 = /(?<![\p{L}])((?:pienso|piensa|pensaba|creo|cree|creía|opino|opina|dijo|dije|digo|considero|supongo|parece|resulta|es obvio|es posible)) de que(?![\p{L}])/giu;
+      while ((m = r1.exec(text))) add('ort', 'dequeismo', m[0], 'Dequeísmo: sobra «de».', m[1] + ' que');
+      const r2 = /(?<![\p{L}])((?:me di cuenta|se dio cuenta|te diste cuenta|estoy seguro|estaba seguro|está seguro|estoy segura|estaba segura|a pesar|me acuerdo|se acordó|me olvidé|tengo la certeza|con tal|en caso)) que(?![\p{L}])/giu;
+      while ((m = r2.exec(text))) add('ort', 'dequeismo', m[0], 'Queísmo: falta «de».', m[1] + ' de que');
+    }
+    // diálogos con guion corto, mayúscula tras punto, signos sin cerrar
+    if (this.on(P, 'dial')) {
+      const m = text.match(/^\s*(-{1,2})\s*\S+/);
+      if (m) add('ort', 'dial', m[0].trim(), 'En diálogos se usa raya (—), no guion.', m[0].trim().replace(/^-{1,2}\s*/, '—'));
+    }
+    if (this.on(P, 'caps')) {
+      let m; const r = /([.!?…]["»”]?\s+)([\p{Ll}][\p{Ll}]+)/gu;
+      while ((m = r.exec(text))) { if (/\b(?:Sr|Sra|Dr|Dra|etc|pág|p)\.\s+$/i.test(text.slice(Math.max(0, m.index - 6), m.index + m[1].length))) continue; if (/…\s+$/.test(m[1])) continue; add('ort', 'caps', m[2], 'Después de punto va mayúscula.', m[2][0].toUpperCase() + m[2].slice(1)); }
+      if (/\.{4,}/.test(text)) { const k = text.match(/\S*\.{4,}/)[0]; add('ort', 'caps', k, 'Los puntos suspensivos son tres.', k.replace(/\.{4,}/, '...')); }
+    }
+    if (this.on(P, 'balance')) {
+      const pairs = [['«', '»'], ['(', ')'], ['“', '”']];
+      pairs.forEach(([a, b]) => {
+        const na = text.split(a).length - 1, nb = text.split(b).length - 1;
+        if (na !== nb) { const i2 = na > nb ? text.lastIndexOf(a) : text.lastIndexOf(b); const frag = (text.slice(i2).match(/^\S+(?:\s+\S+)?/) || [a])[0]; add('ort', 'balance', frag, 'Hay un «' + (na > nb ? a : b) + '» sin su pareja «' + (na > nb ? b : a) + '».'); }
+      });
+      const q = (text.match(/"/g) || []).length;
+      if (q % 2) { const i2 = text.lastIndexOf('"'); add('ort', 'balance', (text.slice(i2).match(/^\S+/) || ['"'])[0], 'Hay comillas sin cerrar.'); }
+    }
+    // inicios de frase repetidos
+    if (this.on(P, 'starts')) {
+      const ss = sentences(text); let run = 1;
+      for (let k = 1; k < ss.length; k++) {
+        const a = fold((ss[k - 1].match(/[\p{L}]+/u) || [''])[0]), b = fold((ss[k].match(/[\p{L}]+/u) || [''])[0]);
+        if (a && a === b && a.length > 1 && !['y'].includes(a)) { run++; if (run === 3) { const w = ss[k].match(/^\s*[«"“¿¡—]?\s*[\p{L}]+/u); if (w) add('rep', 'starts', w[0].trim(), 'Tres frases seguidas empiezan con «' + (ss[k].match(/[\p{L}]+/u) || [''])[0] + '».'); } }
+        else run = 1;
+      }
+    }
+    if (this.on(P, 'gerund')) {
+      sentences(text).forEach(s2 => { const g = s2.match(/[\p{L}]+(?:ando|iendo|yendo)\b/gu); if (g && g.length >= 3) add('rec', 'gerund', g[2], g.length + ' gerundios en la misma frase; puede volverse pesada.'); });
+    }
+    if (this.on(P, 'longpar')) {
+      const n = countWords(text);
+      if (n > 260) { const head = (text.match(/^\s*(\S+\s+){0,4}\S+/) || [''])[0].trim(); add('dud', 'longpar', head, 'Párrafo de ' + n + ' palabras. Si mezcla varias ideas, podría dividirse.'); }
     }
     // frases largas
     if (this.on(P, 'long')) {
@@ -5287,7 +5388,7 @@ const Checker = {
       });
     }
     if (this.on(P, 'spell') && Spell.available()) {
-      const own = new Set((P.dictionary || []).concat(Spell.userWords()));
+      const own = new Set((P.dictionary || []).concat(Spell.userWords(), (this._ok || [])));
       const words = Array.from(new Set(toks.filter(t => {
         if (t.w.length < 2 || own.has(t.w) || own.has(t.w.toLowerCase()) || nameSet.has(t.w)) return false;
         if (/^\p{Lu}/u.test(t.w) && !t.start) return false;
@@ -5318,9 +5419,13 @@ const Checker = {
     const ids = pids || paras.map(p => p.id);
     const protectedIds = protectedMarkIds(P);
     const results = new Map();
+    this._ok = d.data.okWords || [];
+    const dis = d.data.dismiss || {};
     for (const pid of ids) {
       const i = paras.findIndex(p => p.id === pid); if (i < 0) continue;
-      results.set(pid, { text: parText(paras[i]), items: await this.analyze(P, paras, i) });
+      const skip = dis[pid] || [];
+      const items = (await this.analyze(P, paras, i)).filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
+      results.set(pid, { text: parText(paras[i]), items: items });
     }
     let added = 0, removed = 0;
     const cur = App.ch(cid); if (!cur || !cur.data) return 0;
