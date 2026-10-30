@@ -656,7 +656,7 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = 'fbcdf885cd';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '9b0b3ebb4b';</script>
 <script>
 (function () {
 'use strict';
@@ -742,6 +742,11 @@ function truncBytes(s, max) {
 }
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
 const MOD = isMac ? '⌘' : 'Ctrl';
+/* Nombre legible de un atajo: keys('mod', '.') → «Ctrl + . (punto)» o «⌘ + . (punto)». */
+function keys() {
+  const names = { mod: MOD, shift: isMac ? '⇧ Shift' : 'Shift', alt: isMac ? '⌥ Opción' : 'Alt', enter: 'Enter', '.': '. (punto)', '-': '- (guion)', pgdn: isMac ? 'Fn + ↓' : 'AvPág', pgup: isMac ? 'Fn + ↑' : 'RePág', esc: 'Esc' };
+  return Array.from(arguments).map(k => names[k] || k).join(' + ');
+}
 
 const STOP = new Set(('a al algo algun alguna algunas alguno algunos ante antes aquel aquella aquellas aquello aquellos aqui ahi alli ahora asi aun aunque bajo bien cada casi como con contra cual cuales cualquier cuando cuanto de del desde donde dos durante el ella ellas ello ellos en entre era eran eres es esa esas ese eso esos esta estaba estaban estado estamos estan estar estas este esto estos estoy fue fueron fui ha habia habian haber hace hacia han has hasta hay he la las le les lo los mas me mi mia mientras mis mucho muchos muy nada ni no nos nosotros nuestra nuestro o os otra otras otro otros para pero poco por porque pues que quien quienes se sea segun ser si sido siempre sin sino sobre solo son su sus tal tambien tan tanto te tenia tener tiene tienen toda todas todo todos tras tu tus un una unas uno unos usted vez y ya yo ese esa cosa cosas mismo misma luego entonces cuya cuyo menos dijo decir hacer puede podia sus nuestras vosotros donde').split(' '));
 
@@ -1429,7 +1434,7 @@ const AI = {
       if (App.prefs.autoAI === undefined || first) App.prefs.autoAI = true;
       App.savePrefs(); Review.disabled = false;
       this.refreshPill();
-      App.toast('IA conectada. Revisa sola al hacer una pausa; también con ' + MOD + ' + Enter.');
+      App.toast('IA conectada. Revisa sola al hacer una pausa; también con ' + keys('mod', 'enter') + '.');
       if (Editor.root) { Editor.unmount(); App.renderStage(); }
       close();
     };
@@ -1898,7 +1903,7 @@ const App = {
       h('div', { class: 'top-r' },
         h('div', { class: 'peers', id: 'peers' }),
         h('span', { class: 'save', id: 'save-st', role: 'status' }),
-        ibtn('search', 'Buscar en el proyecto (' + MOD + '+Shift+F)', () => window.Search && Search.open(), { id: 'btn-search', hidden: true }),
+        ibtn('search', 'Buscar en el proyecto (' + keys('mod', 'shift', 'F') + ')', () => window.Search && Search.open(), { id: 'btn-search', hidden: true }),
         h('button', { class: 'ai-pill off', id: 'btn-ai', type: 'button', hidden: true, onclick: () => AI.open() }),
         ibtn('people', 'Colaborar', () => window.Collab && Collab.openPanel(), { id: 'btn-share' }),
         h('button', { class: 'ibtn me-btn', id: 'btn-me', type: 'button', 'aria-label': 'Tu perfil y apariencia', title: 'Tu perfil y apariencia', onclick: () => Profile.open() }, icon('palette')),
@@ -1991,7 +1996,7 @@ const App = {
     const steps = [
       ['Crea un proyecto', 'Elige si es novela, cuento, ensayo, columna, guion o poesía. Cada tipo trae su biblia.'],
       ['Escribe o importa', 'Escribe directo en la hoja o trae un Word, Markdown o Google Doc.'],
-      RT.web ? ['Revisa sin y con IA', 'La revisión rápida marca ortografía, repeticiones y frases largas mientras escribes. Con tu clave de IA, también coherencia e informes.'] : ['Deja que Claude marque', 'Al hacer una pausa, o con ' + MOD + ' + Enter, aparecen notas al margen. Tú decides qué hacer.'],
+      RT.web ? ['Revisa sin y con IA', 'La revisión rápida marca ortografía, repeticiones y frases largas mientras escribes. Con tu clave de IA, también coherencia e informes.'] : ['Deja que Claude marque', 'Al hacer una pausa, o con ' + keys('mod', 'enter') + ', aparecen notas al margen. Tú decides qué hacer.'],
       ['Ajusta la apariencia', 'Colores, tipografías, tamaño de letra y ancho de la hoja, desde tu perfil.']
     ];
     const ol = h('ol', { class: 'steps' });
@@ -2326,7 +2331,7 @@ const App = {
       const d = App.ch(App.cid);
       s.append(h('span', null, App.unit() + ': ', h('b', { text: fmtN(d && d.data ? chapterWords(d.data) : 0) })));
       if (Editor.selWords) s.append(h('span', null, 'Selección: ', h('b', { text: fmtN(Editor.selWords) })));
-      if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + MOD + ' J)', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
+      if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + keys('mod', 'K') + ')', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
     }
     if (P) {
       s.append(h('span', null, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
@@ -2470,26 +2475,30 @@ const App = {
       else this.toast('Todo se guarda solo.');
       return;
     }
-    if (mod && e.key === '.' && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
+    if (mod && (e.key === '.' || e.code === 'Period' || e.code === 'NumpadDecimal') && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
     if (!typing && !mod && e.key === '?') { e.preventDefault(); this.help(); }
   },
   help() {
     const rows = [
-      [MOD + ' + Enter', 'Revisar con IA el párrafo donde estás'],
-      [MOD + ' + Shift + Enter', 'Revisar todos los párrafos editados'],
-      [MOD + ' + Z / ' + MOD + ' + Shift + Z', 'Deshacer / rehacer'],
-      [MOD + ' + S', 'Guardar una versión del capítulo'],
-      [MOD + ' + Shift + F', 'Buscar y reemplazar en el proyecto'],
-      [MOD + ' + .', 'Modo foco (máquina de escribir)'],
+      [keys('mod', 'enter'), 'Revisar con IA el párrafo donde estás'],
+      [keys('mod', 'shift', 'enter'), 'Revisar todos los párrafos editados'],
+      [keys('mod', 'Z') + ' / ' + keys('mod', 'shift', 'Z'), 'Deshacer / rehacer'],
+      [keys('mod', 'S'), 'Guardar una versión del capítulo'],
+      [keys('mod', 'shift', 'F'), 'Buscar y reemplazar en el proyecto'],
+      [keys('mod', 'K'), 'Ir a… (capítulo, sección, página)'],
+      [keys('alt', 'pgdn') + ' / ' + keys('alt', 'pgup'), 'Capítulo siguiente / anterior'],
+      [keys('mod', '.'), 'Modo foco (máquina de escribir)'],
+      [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
+      [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
       ['Seleccionar texto', 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']
     ];
-    const keys = h('div', { class: 'keys' });
-    rows.forEach(r => keys.append(h('span', { class: 'kbd', text: r[0] }), h('span', { text: r[1] })));
+    const keysEl = h('div', { class: 'keys' });
+    rows.forEach(r => keysEl.append(h('span', { class: 'kbd', text: r[0] }), h('span', { text: r[1] })));
     UI.modal({
       title: 'Atajos y ayuda',
-      body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keys,
+      body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keysEl,
         h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas de Claude se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
       buttons: [{ label: 'Listo', cls: 'primary' }]
     });
@@ -2642,12 +2651,18 @@ const Editor = {
       Pages.pages.length > 1 ? { label: 'Revisión rápida de esta página (' + Pages.cur + ')', onClick: () => Pages.reviewQuick() } : null,
       { label: 'Revisión rápida al escribir', checked: App.prefs.autoLocal !== false, keep: true, onClick: () => { App.prefs.autoLocal = App.prefs.autoLocal === false; App.savePrefs(); } },
       { sep: true },
+      { header: 'Diálogo' },
+      { label: 'Abrir línea de diálogo (—)', kbd: keys('alt', '-'), onClick: () => Dialogo.open() },
+      { label: 'Inciso del narrador ( —…—)', kbd: keys('alt', 'I'), onClick: () => Dialogo.inciso() },
+      { label: 'Revisar diálogos del ' + unit, onClick: () => Dialogo.check(this.cid) },
+      { label: 'Cómo se escriben los diálogos…', onClick: () => Dialogo.help() },
+      { sep: true },
       { header: RT.web ? 'Con IA' + (aiOk ? '' : ' (configúrala primero)') : 'Con Claude' }
     ];
-    if (!RT.sample) { UI.menu(a, items.slice(0, 3)); return; }
+    if (!RT.sample) { UI.menu(a, items.filter(Boolean).slice(0, items.filter(Boolean).length - 2)); return; }
     UI.menu(a, items.concat([
-      { label: 'Revisar este párrafo', kbd: MOD + '↵', onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
-      { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: MOD + '⇧↵', disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
+      { label: 'Revisar este párrafo', kbd: keys('mod', 'enter'), onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
+      { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: keys('mod', 'shift', 'enter'), disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
       Pages.pages.length > 1 ? { label: 'Revisar esta página (' + Pages.cur + ')', onClick: () => Pages.reviewAI() } : null,
       { label: 'Revisar todo el ' + App.unit().toLowerCase(), onClick: () => Review.reviewChapter(this.cid) },
       { sep: true },
@@ -2677,14 +2692,14 @@ const Editor = {
       { label: 'Medir versos…', onClick: () => Metrica.open() },
       { sep: true },
       { label: 'Ver todas las notas en lista', onClick: () => this.notesDrawer() },
-      { label: 'Modo foco', kbd: MOD + '.', onClick: () => this.setFocus(true) }
+      { label: 'Modo foco', kbd: keys('mod', '.'), onClick: () => this.setFocus(true) }
     ]);
   },
   moreMenu(a) {
     const items = [
-      { label: 'Guardar una versión', kbd: MOD + 'S', disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
+      { label: 'Guardar una versión', kbd: keys('mod', 'S'), disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
       { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
-      { label: 'Ir a…', kbd: MOD + 'J', onClick: () => Pages.palette() },
+      { label: 'Ir a…', kbd: keys('mod', 'K'), onClick: () => Pages.palette() },
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
       { label: 'Exportar este ' + App.unit().toLowerCase(), onClick: () => IO.openExport(App.pid, this.cid) },
@@ -2732,6 +2747,8 @@ const Editor = {
       else { const c = this.getCaret() || this.lastCaret; if (c) Review.reviewPara(this.cid, c.pid, true); }
       return;
     }
+    // diálogo: Alt + guion abre la línea con raya; Alt + I abre o cierra el inciso
+    if (e.altKey && !mod && !e.shiftKey && window.Dialogo && (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'Slash' && /[-–]/.test(e.key) || e.code === 'KeyI')) { e.preventDefault(); if (e.code === 'KeyI') Dialogo.inciso(); else Dialogo.open(); return; }
     if (mod && !e.altKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) this.redo(); else this.undo(); return; }
     if (mod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); this.redo(); return; }
     if (mod && /^[biu]$/i.test(e.key)) { e.preventDefault(); return; }
@@ -3031,7 +3048,7 @@ const Editor = {
     const p = this.cdoc.data.paras[i];
     const [L, R] = splitSegs(p.segs, c.off);
     const np = { id: uid('p'), segs: R };
-    this.cdoc.update(d => { d.paras[i] = { id: p.id, segs: L }; d.paras.splice(i + 1, 0, np); }, { silent: true });
+    this.cdoc.update(d => { d.paras[i] = Object.assign({}, p, { segs: L }); d.paras.splice(i + 1, 0, np); }, { silent: true });
     this.addDirty(p.id); if (R.length) this.addDirty(np.id);
     this.render();
     this.setCaret({ pid: np.id, off: 0 });
@@ -3043,7 +3060,7 @@ const Editor = {
     if (!prev || !cur) return;
     this.pushUndo();
     const off = parText(prev).length;
-    this.cdoc.update(d => { d.paras[i - 1] = { id: prev.id, segs: normSegs(prev.segs.concat(cur.segs)) }; d.paras.splice(i, 1); }, { silent: true });
+    this.cdoc.update(d => { d.paras[i - 1] = Object.assign({}, prev, { segs: normSegs(prev.segs.concat(cur.segs)) }); d.paras.splice(i, 1); }, { silent: true });
     this.addDirty(prev.id);
     this.render();
     this.setCaret({ pid: prev.id, off: off });
@@ -4505,7 +4522,7 @@ const Versions = {
     if (!UI.drawerOpen('history')) return;
     body.textContent = '';
     const cur = App.ch(cid);
-    body.append(h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Cada vez que vuelves a editar un ' + App.unit().toLowerCase() + ' después de un rato, antes de reemplazar y cuando presionas ' + MOD + '+S, queda una versión. Elige una para ver qué cambió.' }));
+    body.append(h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Cada vez que vuelves a editar un ' + App.unit().toLowerCase() + ' después de un rato, antes de reemplazar y cuando presionas ' + keys('mod', 'S') + ', queda una versión. Elige una para ver qué cambió.' }));
     const preview = h('div', { class: 'diff', id: 'hist-diff' });
     const lst = h('div', { style: 'display:flex;flex-direction:column;gap:.4rem' });
     if (!list.length) lst.append(h('div', { class: 'empty', style: 'padding:1rem', text: 'Todavía no hay versiones guardadas de este texto.' }));
@@ -5609,7 +5626,10 @@ const Checker = {
     for (const pid of ids) {
       const i = paras.findIndex(p => p.id === pid); if (i < 0) continue;
       const skip = dis[pid] || [];
-      const items = (await this.analyze(P, paras, i)).filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
+      let items = await this.analyze(P, paras, i);
+      // si el párrafo tenía observaciones de diálogo, se vuelven a calcular
+      if (window.Dialogo && paras[i].segs.some(s => s.m && s.m.rule === 'dlg' && !s.m.done)) items = items.concat(Dialogo.analyze(parText(paras[i])));
+      items = items.filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
       results.set(pid, { text: parText(paras[i]), items: items });
     }
     let added = 0, removed = 0;
@@ -6639,7 +6659,7 @@ const Pages = {
     const box = h('nav', { class: 'ch-nav', 'aria-label': 'Navegar entre ' + kindOf(App.P()).units.toLowerCase() });
     const lab = (c) => this.label(c) + (c.title && c.title !== this.label(c) ? ': ' + c.title : '');
     box.append(prev ? h('button', { type: 'button', class: 'prev', onclick: () => this.goChapter(-1) }, h('span', { class: 'k', text: '← Anterior' }), h('span', { class: 't', text: lab(prev) })) : h('span'));
-    box.append(h('button', { type: 'button', class: 'mid', onclick: () => this.palette(), title: 'Ir a… (' + MOD + ' J)' }, 'Ir a…'));
+    box.append(h('button', { type: 'button', class: 'mid', onclick: () => this.palette(), title: 'Ir a… (' + keys('mod', 'K') + ')' }, 'Ir a…'));
     box.append(next ? h('button', { type: 'button', class: 'next', onclick: () => this.goChapter(1) }, h('span', { class: 'k', text: 'Siguiente →' }), h('span', { class: 't', text: lab(next) })) : (RT.canWrite ? h('button', { type: 'button', class: 'next', onclick: (e) => this.addMenu(e.currentTarget) }, h('span', { class: 'k', text: 'Agregar →' }), h('span', { class: 't', text: 'Nuevo ' + App.unit().toLowerCase() + ' o sección' })) : h('span')));
     return box;
   },
@@ -6741,10 +6761,128 @@ window.Pages = Pages;
 document.addEventListener('keydown', (e) => {
   if (!window.App || App.view !== 'project') return;
   const mod = e.metaKey || e.ctrlKey;
-  if (mod && !e.shiftKey && !e.altKey && (e.key === 'j' || e.key === 'J')) { e.preventDefault(); Pages.palette(); return; }
+  if (mod && !e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); Pages.palette(); return; }
   if (App.tab === 'escribir' && e.altKey && !mod && (e.key === 'PageDown' || e.key === 'PageUp')) { e.preventDefault(); Pages.goChapter(e.key === 'PageDown' ? 1 : -1); }
 });
 document.addEventListener('scroll', rafThrottle(() => { if (window.Editor && Editor.root) Pages.track(true); }), true);
+
+/* ============ diálogos: atajos para la raya y revisión a pedido (normas de la RAE) ============ */
+const DLG_VERBS = ['dijo', 'dije', 'preguntó', 'pregunté', 'respondió', 'respondí', 'contestó', 'contesté', 'murmuró', 'susurró', 'gritó', 'exclamó', 'añadió', 'agregó', 'repitió', 'comentó', 'insistió', 'explicó', 'replicó', 'pensó', 'suspiró', 'sonrió', 'interrumpió', 'continuó', 'siguió', 'aclaró', 'admitió', 'advirtió', 'ordenó', 'pidió', 'propuso', 'protestó', 'reconoció', 'recordó', 'se rió', 'rio', 'rió', 'masculló', 'balbuceó', 'tartamudeó', 'mintió', 'confesó', 'concluyó', 'dice', 'pregunta', 'responde', 'contesta', 'murmura', 'grita'];
+const DLG_VERB_RE = new RegExp('^(' + DLG_VERBS.map(escRe).join('|') + ')(?![\\p{L}])', 'iu');
+
+const Dialogo = {
+  /* ---------- atajos ---------- */
+  caretPara() {
+    const c = Editor.getCaret() || Editor.lastCaret; if (!c || !Editor.cdoc) return null;
+    const p = Editor.cdoc.data.paras.find(x => x.id === c.pid); if (!p) return null;
+    return { c: c, p: p, t: parText(p) };
+  },
+  /* Alt + guion: empieza una línea de diálogo con raya (en el párrafo vacío o en uno nuevo). */
+  open() {
+    if (!RT.canWrite || !Editor.root) return;
+    const x = this.caretPara(); if (!x) { Editor.root.focus(); return; }
+    Editor.root.focus();
+    if (!x.t.trim()) { Editor.setCaret({ pid: x.p.id, off: 0 }); document.execCommand('insertText', false, '—'); return; }
+    if (x.c.off === 0 && !/^\s*—/.test(x.t)) { Editor.setCaret({ pid: x.p.id, off: 0 }); document.execCommand('insertText', false, '—'); return; }
+    Editor.setCaret({ pid: x.p.id, off: x.t.length });
+    Editor.splitAtCaret();
+    document.execCommand('insertText', false, '—');
+  },
+  /* Alt+I: abre o cierra el inciso del narrador según dónde estés (« —dijo» … «—»). */
+  inciso() {
+    if (!RT.canWrite || !Editor.root) return;
+    const x = this.caretPara(); if (!x) return;
+    Editor.root.focus();
+    const before = x.t.slice(0, x.c.off);
+    let n = (before.match(/—/g) || []).length;
+    if (/^\s*—/.test(x.t)) n--;
+    if (n % 2 === 0) document.execCommand('insertText', false, (!before || /\s$/.test(before) ? '' : ' ') + '—');
+    else {
+      if (/ $/.test(before)) document.execCommand('delete');
+      document.execCommand('insertText', false, '—');
+    }
+  },
+  /* ---------- revisión ---------- */
+  /* Devuelve observaciones {type, rule, text, note, fix} para un párrafo. Solo señala. */
+  analyze(t) {
+    const out = [];
+    const add = (text, note, fix) => { if (text && t.indexOf(text) >= 0 && !out.some(o => o.text === text)) out.push({ type: 'ort', rule: 'dlg', text: text, note: note + ' Si es un estilo buscado, ignóralo.', fix: fix }); };
+    const isDlg = /^\s*[—–-]/.test(t);
+    // guion o semiraya en lugar de raya (al abrir ya lo marca la revisión rápida)
+    if (isDlg) { const re = /(\S)\s[-–]\s?([\p{Ll}])/gu; let m; while ((m = re.exec(t))) add(m[0], 'En los incisos del narrador va raya (—), no guion.', m[1] + ' —' + m[2]); }
+    // solo se revisan los párrafos de diálogo (los que empiezan con raya)
+    if (!isDlg || !/—/.test(t)) return out;
+    // raya que abre el diálogo seguida de espacio
+    let m = /^\s*(— +)([\p{L}¿¡«]+)/u.exec(t);
+    if (m) add(m[1] + m[2], 'Tras la raya que abre el diálogo no va espacio.', '—' + m[2]);
+    // rayas de inciso: se alternan apertura y cierre
+    const pos = []; for (let i = 0; i < t.length; i++) if (t[i] === '—') pos.push(i);
+    const opener = /^\s*—/.test(t) ? pos.shift() : null;
+    const word = (i, dir) => { if (dir < 0) { const s = t.slice(0, i); const w = s.match(/(\S+)\s*$/); return w ? w[0] : ''; } const s = t.slice(i + 1); const w = s.match(/^\s*\S+/); return w ? w[0] : ''; };
+    pos.forEach((i, k) => {
+      const opening = k % 2 === 0;
+      const prev = t[i - 1] || '', next = t[i + 1] || '';
+      const ctx = word(i, -1) + '—' + word(i, 1);
+      if (opening) {
+        const last = k === pos.length - 1;
+        if (prev && !/\s/.test(prev) && !/[(«"“]/.test(prev)) add(ctx, 'Falta un espacio antes de la raya que abre el inciso.', word(i, -1) + ' —' + word(i, 1));
+        else if (/\s/.test(next)) add(word(i, -1) + '—' + word(i, 1), 'Sobra el espacio después de la raya que abre el inciso.', word(i, -1) + '—' + word(i, 1).trimStart());
+        const after = t.slice(i + 1).replace(/^\s+/, '');
+        const vm = DLG_VERB_RE.exec(after);
+        if (vm && /^\p{Lu}/u.test(vm[1])) add('—' + vm[1], 'El verbo del inciso («' + vm[1].toLowerCase() + '») va en minúscula.', '—' + vm[1].toLowerCase());
+        const pb = t.slice(0, i).replace(/\s+$/, '');
+        const seg = vm ? t.slice(pb.length - 1, i + 1 + (t.slice(i + 1).match(/^\s*/)[0].length) + vm[1].length) : '';
+        if (vm && /[,;:]$/.test(pb)) add(seg, 'El signo («' + pb.slice(-1) + '») va después del inciso, tras la raya de cierre: «… —' + vm[1].toLowerCase() + '—' + pb.slice(-1) + '».', '');
+        else if (vm && /[^.]\.$/.test(pb)) add(seg, 'Antes de un inciso con verbo de habla no va punto: el punto va después del inciso.', '');
+        void last;
+      } else {
+        if (/\s/.test(prev)) add(word(i, -1) + ' —', 'Sobra el espacio antes de la raya que cierra el inciso.', word(i, -1) + '—');
+        const rest = t.slice(i + 1);
+        if (/^[\s.…]*$/.test(rest)) add(word(i, -1).replace(/—$/, '') + '—' + rest.trim(), 'Si el inciso termina el párrafo, no se cierra con raya.', word(i, -1).replace(/—$/, '') + (rest.trim() || ''));
+        else if (/^[\p{L}¿¡]/u.test(rest)) add(ctx, 'Falta un espacio (o un signo) después de la raya que cierra el inciso.', word(i, -1) + '— ' + word(i, 1));
+      }
+    });
+    return out;
+  },
+  async check(cid) {
+    cid = cid || App.cid;
+    const d = App.ch(cid); if (!d || !d.data || !RT.canWrite) return;
+    const P = App.P(); const protectedIds = protectedMarkIds(P);
+    const res = new Map();
+    d.data.paras.forEach(p => { const t = parText(p); res.set(p.id, { text: t, items: this.analyze(t) }); });
+    let added = 0;
+    Editor.pushUndo && Editor.cid === cid && Editor.pushUndo();
+    d.update(x => {
+      x.paras.forEach((p, k) => {
+        const r = res.get(p.id); if (!r || parText(p) !== r.text) return;
+        const np = clone(p);
+        np.segs = normSegs(np.segs.map(s => (s.m && s.m.rule === 'dlg' && isStale(s.m, protectedIds, 'revisor')) ? { t: s.m.text } : s));
+        r.items.forEach(it => { if (Checker.insert(np, it)) added++; });
+        x.paras[k] = np;
+      });
+    }, { silent: true });
+    if (Editor.root && Editor.cid === cid) { Editor.render(true); Editor.afterChange(); }
+    const dlgParas = d.data.paras.filter(p => /^\s*[—–-]/.test(parText(p))).length;
+    App.toast(added ? plural(added, 'detalle', 'detalles') + ' en los diálogos.' : (dlgParas ? 'Los diálogos siguen las normas de la raya.' : 'No encontré diálogos con raya en este ' + App.unit().toLowerCase() + '.'));
+    return added;
+  },
+  help() {
+    const ex = (a, b) => h('div', { class: 'dlg-ex' }, h('span', { class: 'k', text: a }), h('span', { text: b }));
+    UI.modal({ title: 'Diálogos con raya', body: h('div', { class: 'dlg-help' },
+      h('p', { class: 'muted', text: 'Atajos que solo insertan la raya; no cambian lo que escribes. La revisión de diálogos es a pedido y solo señala.' }),
+      h('div', { class: 'dlg-keys' },
+        ex(keys('alt', '-'), 'Abre una línea de diálogo: pone la raya al inicio del párrafo (o en uno nuevo).'),
+        ex(keys('alt', 'I'), 'Inciso del narrador: la primera vez abre « —», la segunda lo cierra «—».')),
+      h('h4', { text: 'Normas básicas (RAE)' }),
+      ex('—Hola.', 'La raya de apertura va pegada a la palabra, sin espacio.'),
+      ex('—Hola —dijo Ana—. ¿Vienes?', 'El inciso se abre con espacio antes y se cierra sin espacio; el punto va después de la raya de cierre.'),
+      ex('—Ya voy —dijo.', 'Si el inciso termina el párrafo, no se cierra con raya.'),
+      ex('—¿Vienes? —preguntó.', 'Tras ? o ! no se agrega punto; el verbo del inciso va en minúscula.'),
+      ex('—Pasa —dijo Ana, y abrió la puerta.', 'Lo que sigue en el inciso es parte de él hasta la raya de cierre o el fin del párrafo.')),
+      buttons: [{ label: 'Revisar diálogos de este ' + App.unit().toLowerCase(), cls: 'primary', onClick: () => { this.check(); } }, { label: 'Cerrar' }] });
+  }
+};
+window.Dialogo = Dialogo;
 
 /* utilidades visibles para depurar desde la consola */
 window.MDE = { allMarks: allMarks, findMark: findMark, parText: parText, RT: RT, Store: Store };

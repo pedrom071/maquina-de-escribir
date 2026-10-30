@@ -235,7 +235,10 @@ const Checker = {
     for (const pid of ids) {
       const i = paras.findIndex(p => p.id === pid); if (i < 0) continue;
       const skip = dis[pid] || [];
-      const items = (await this.analyze(P, paras, i)).filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
+      let items = await this.analyze(P, paras, i);
+      // si el párrafo tenía observaciones de diálogo, se vuelven a calcular
+      if (window.Dialogo && paras[i].segs.some(s => s.m && s.m.rule === 'dlg' && !s.m.done)) items = items.concat(Dialogo.analyze(parText(paras[i])));
+      items = items.filter(it => !skip.some(z => z.t === it.text && (!z.r || z.r === it.rule)));
       results.set(pid, { text: parText(paras[i]), items: items });
     }
     let added = 0, removed = 0;

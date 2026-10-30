@@ -107,7 +107,7 @@ const App = {
       h('div', { class: 'top-r' },
         h('div', { class: 'peers', id: 'peers' }),
         h('span', { class: 'save', id: 'save-st', role: 'status' }),
-        ibtn('search', 'Buscar en el proyecto (' + MOD + '+Shift+F)', () => window.Search && Search.open(), { id: 'btn-search', hidden: true }),
+        ibtn('search', 'Buscar en el proyecto (' + keys('mod', 'shift', 'F') + ')', () => window.Search && Search.open(), { id: 'btn-search', hidden: true }),
         h('button', { class: 'ai-pill off', id: 'btn-ai', type: 'button', hidden: true, onclick: () => AI.open() }),
         ibtn('people', 'Colaborar', () => window.Collab && Collab.openPanel(), { id: 'btn-share' }),
         h('button', { class: 'ibtn me-btn', id: 'btn-me', type: 'button', 'aria-label': 'Tu perfil y apariencia', title: 'Tu perfil y apariencia', onclick: () => Profile.open() }, icon('palette')),
@@ -200,7 +200,7 @@ const App = {
     const steps = [
       ['Crea un proyecto', 'Elige si es novela, cuento, ensayo, columna, guion o poesía. Cada tipo trae su biblia.'],
       ['Escribe o importa', 'Escribe directo en la hoja o trae un Word, Markdown o Google Doc.'],
-      RT.web ? ['Revisa sin y con IA', 'La revisión rápida marca ortografía, repeticiones y frases largas mientras escribes. Con tu clave de IA, también coherencia e informes.'] : ['Deja que Claude marque', 'Al hacer una pausa, o con ' + MOD + ' + Enter, aparecen notas al margen. Tú decides qué hacer.'],
+      RT.web ? ['Revisa sin y con IA', 'La revisión rápida marca ortografía, repeticiones y frases largas mientras escribes. Con tu clave de IA, también coherencia e informes.'] : ['Deja que Claude marque', 'Al hacer una pausa, o con ' + keys('mod', 'enter') + ', aparecen notas al margen. Tú decides qué hacer.'],
       ['Ajusta la apariencia', 'Colores, tipografías, tamaño de letra y ancho de la hoja, desde tu perfil.']
     ];
     const ol = h('ol', { class: 'steps' });
@@ -535,7 +535,7 @@ const App = {
       const d = App.ch(App.cid);
       s.append(h('span', null, App.unit() + ': ', h('b', { text: fmtN(d && d.data ? chapterWords(d.data) : 0) })));
       if (Editor.selWords) s.append(h('span', null, 'Selección: ', h('b', { text: fmtN(Editor.selWords) })));
-      if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + MOD + ' J)', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
+      if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + keys('mod', 'K') + ')', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
     }
     if (P) {
       s.append(h('span', null, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
@@ -679,26 +679,30 @@ const App = {
       else this.toast('Todo se guarda solo.');
       return;
     }
-    if (mod && e.key === '.' && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
+    if (mod && (e.key === '.' || e.code === 'Period' || e.code === 'NumpadDecimal') && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
     if (!typing && !mod && e.key === '?') { e.preventDefault(); this.help(); }
   },
   help() {
     const rows = [
-      [MOD + ' + Enter', 'Revisar con IA el párrafo donde estás'],
-      [MOD + ' + Shift + Enter', 'Revisar todos los párrafos editados'],
-      [MOD + ' + Z / ' + MOD + ' + Shift + Z', 'Deshacer / rehacer'],
-      [MOD + ' + S', 'Guardar una versión del capítulo'],
-      [MOD + ' + Shift + F', 'Buscar y reemplazar en el proyecto'],
-      [MOD + ' + .', 'Modo foco (máquina de escribir)'],
+      [keys('mod', 'enter'), 'Revisar con IA el párrafo donde estás'],
+      [keys('mod', 'shift', 'enter'), 'Revisar todos los párrafos editados'],
+      [keys('mod', 'Z') + ' / ' + keys('mod', 'shift', 'Z'), 'Deshacer / rehacer'],
+      [keys('mod', 'S'), 'Guardar una versión del capítulo'],
+      [keys('mod', 'shift', 'F'), 'Buscar y reemplazar en el proyecto'],
+      [keys('mod', 'K'), 'Ir a… (capítulo, sección, página)'],
+      [keys('alt', 'pgdn') + ' / ' + keys('alt', 'pgup'), 'Capítulo siguiente / anterior'],
+      [keys('mod', '.'), 'Modo foco (máquina de escribir)'],
+      [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
+      [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
       ['Seleccionar texto', 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']
     ];
-    const keys = h('div', { class: 'keys' });
-    rows.forEach(r => keys.append(h('span', { class: 'kbd', text: r[0] }), h('span', { text: r[1] })));
+    const keysEl = h('div', { class: 'keys' });
+    rows.forEach(r => keysEl.append(h('span', { class: 'kbd', text: r[0] }), h('span', { text: r[1] })));
     UI.modal({
       title: 'Atajos y ayuda',
-      body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keys,
+      body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keysEl,
         h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas de Claude se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
       buttons: [{ label: 'Listo', cls: 'primary' }]
     });

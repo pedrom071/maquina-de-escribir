@@ -143,12 +143,18 @@ const Editor = {
       Pages.pages.length > 1 ? { label: 'Revisión rápida de esta página (' + Pages.cur + ')', onClick: () => Pages.reviewQuick() } : null,
       { label: 'Revisión rápida al escribir', checked: App.prefs.autoLocal !== false, keep: true, onClick: () => { App.prefs.autoLocal = App.prefs.autoLocal === false; App.savePrefs(); } },
       { sep: true },
+      { header: 'Diálogo' },
+      { label: 'Abrir línea de diálogo (—)', kbd: keys('alt', '-'), onClick: () => Dialogo.open() },
+      { label: 'Inciso del narrador ( —…—)', kbd: keys('alt', 'I'), onClick: () => Dialogo.inciso() },
+      { label: 'Revisar diálogos del ' + unit, onClick: () => Dialogo.check(this.cid) },
+      { label: 'Cómo se escriben los diálogos…', onClick: () => Dialogo.help() },
+      { sep: true },
       { header: RT.web ? 'Con IA' + (aiOk ? '' : ' (configúrala primero)') : 'Con Claude' }
     ];
-    if (!RT.sample) { UI.menu(a, items.slice(0, 3)); return; }
+    if (!RT.sample) { UI.menu(a, items.filter(Boolean).slice(0, items.filter(Boolean).length - 2)); return; }
     UI.menu(a, items.concat([
-      { label: 'Revisar este párrafo', kbd: MOD + '↵', onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
-      { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: MOD + '⇧↵', disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
+      { label: 'Revisar este párrafo', kbd: keys('mod', 'enter'), onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
+      { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: keys('mod', 'shift', 'enter'), disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
       Pages.pages.length > 1 ? { label: 'Revisar esta página (' + Pages.cur + ')', onClick: () => Pages.reviewAI() } : null,
       { label: 'Revisar todo el ' + App.unit().toLowerCase(), onClick: () => Review.reviewChapter(this.cid) },
       { sep: true },
@@ -178,14 +184,14 @@ const Editor = {
       { label: 'Medir versos…', onClick: () => Metrica.open() },
       { sep: true },
       { label: 'Ver todas las notas en lista', onClick: () => this.notesDrawer() },
-      { label: 'Modo foco', kbd: MOD + '.', onClick: () => this.setFocus(true) }
+      { label: 'Modo foco', kbd: keys('mod', '.'), onClick: () => this.setFocus(true) }
     ]);
   },
   moreMenu(a) {
     const items = [
-      { label: 'Guardar una versión', kbd: MOD + 'S', disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
+      { label: 'Guardar una versión', kbd: keys('mod', 'S'), disabled: !RT.canWrite, onClick: () => Versions.saveVersion(this.cid, 'Guardada a mano').then(ok => ok && App.toast('Versión guardada.')) },
       { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
-      { label: 'Ir a…', kbd: MOD + 'J', onClick: () => Pages.palette() },
+      { label: 'Ir a…', kbd: keys('mod', 'K'), onClick: () => Pages.palette() },
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
       { label: 'Exportar este ' + App.unit().toLowerCase(), onClick: () => IO.openExport(App.pid, this.cid) },
@@ -233,6 +239,8 @@ const Editor = {
       else { const c = this.getCaret() || this.lastCaret; if (c) Review.reviewPara(this.cid, c.pid, true); }
       return;
     }
+    // diálogo: Alt + guion abre la línea con raya; Alt + I abre o cierra el inciso
+    if (e.altKey && !mod && !e.shiftKey && window.Dialogo && (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'Slash' && /[-–]/.test(e.key) || e.code === 'KeyI')) { e.preventDefault(); if (e.code === 'KeyI') Dialogo.inciso(); else Dialogo.open(); return; }
     if (mod && !e.altKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); if (e.shiftKey) this.redo(); else this.undo(); return; }
     if (mod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); this.redo(); return; }
     if (mod && /^[biu]$/i.test(e.key)) { e.preventDefault(); return; }
@@ -532,7 +540,7 @@ const Editor = {
     const p = this.cdoc.data.paras[i];
     const [L, R] = splitSegs(p.segs, c.off);
     const np = { id: uid('p'), segs: R };
-    this.cdoc.update(d => { d.paras[i] = { id: p.id, segs: L }; d.paras.splice(i + 1, 0, np); }, { silent: true });
+    this.cdoc.update(d => { d.paras[i] = Object.assign({}, p, { segs: L }); d.paras.splice(i + 1, 0, np); }, { silent: true });
     this.addDirty(p.id); if (R.length) this.addDirty(np.id);
     this.render();
     this.setCaret({ pid: np.id, off: 0 });
@@ -544,7 +552,7 @@ const Editor = {
     if (!prev || !cur) return;
     this.pushUndo();
     const off = parText(prev).length;
-    this.cdoc.update(d => { d.paras[i - 1] = { id: prev.id, segs: normSegs(prev.segs.concat(cur.segs)) }; d.paras.splice(i, 1); }, { silent: true });
+    this.cdoc.update(d => { d.paras[i - 1] = Object.assign({}, prev, { segs: normSegs(prev.segs.concat(cur.segs)) }); d.paras.splice(i, 1); }, { silent: true });
     this.addDirty(prev.id);
     this.render();
     this.setCaret({ pid: prev.id, off: off });

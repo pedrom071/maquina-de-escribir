@@ -80,6 +80,11 @@ function truncBytes(s, max) {
 }
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
 const MOD = isMac ? '⌘' : 'Ctrl';
+/* Nombre legible de un atajo: keys('mod', '.') → «Ctrl + . (punto)» o «⌘ + . (punto)». */
+function keys() {
+  const names = { mod: MOD, shift: isMac ? '⇧ Shift' : 'Shift', alt: isMac ? '⌥ Opción' : 'Alt', enter: 'Enter', '.': '. (punto)', '-': '- (guion)', pgdn: isMac ? 'Fn + ↓' : 'AvPág', pgup: isMac ? 'Fn + ↑' : 'RePág', esc: 'Esc' };
+  return Array.from(arguments).map(k => names[k] || k).join(' + ');
+}
 
 const STOP = new Set(('a al algo algun alguna algunas alguno algunos ante antes aquel aquella aquellas aquello aquellos aqui ahi alli ahora asi aun aunque bajo bien cada casi como con contra cual cuales cualquier cuando cuanto de del desde donde dos durante el ella ellas ello ellos en entre era eran eres es esa esas ese eso esos esta estaba estaban estado estamos estan estar estas este esto estos estoy fue fueron fui ha habia habian haber hace hacia han has hasta hay he la las le les lo los mas me mi mia mientras mis mucho muchos muy nada ni no nos nosotros nuestra nuestro o os otra otras otro otros para pero poco por porque pues que quien quienes se sea segun ser si sido siempre sin sino sobre solo son su sus tal tambien tan tanto te tenia tener tiene tienen toda todas todo todos tras tu tus un una unas uno unos usted vez y ya yo ese esa cosa cosas mismo misma luego entonces cuya cuyo menos dijo decir hacer puede podia sus nuestras vosotros donde').split(' '));
 

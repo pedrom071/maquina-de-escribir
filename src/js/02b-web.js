@@ -285,7 +285,7 @@ const AI = {
       if (App.prefs.autoAI === undefined || first) App.prefs.autoAI = true;
       App.savePrefs(); Review.disabled = false;
       this.refreshPill();
-      App.toast('IA conectada. Revisa sola al hacer una pausa; también con ' + MOD + ' + Enter.');
+      App.toast('IA conectada. Revisa sola al hacer una pausa; también con ' + keys('mod', 'enter') + '.');
       if (Editor.root) { Editor.unmount(); App.renderStage(); }
       close();
     };

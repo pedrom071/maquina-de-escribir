@@ -9,7 +9,7 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 ## Qué hace
 
 - **Proyectos y capítulos.** Varios proyectos, cada uno con capítulos (o partes, secciones, escenas), secciones especiales sin numerar (dedicatoria, epígrafe, prefacio, prólogo, introducción, nota del autor, epílogo, apéndice, glosario, agradecimientos, sobre el autor) que se ordenan solas al comienzo o al final, papelera y meta de palabras.
-- **Editor.** Hoja continua o páginas numeradas, saltos de página, navegación entre capítulos (anterior/siguiente, «Ir a…» con Ctrl/⌘ + J, Alt + AvPág/RePág) y revisión de una sola página. Deshacer propio, modo foco tipo máquina de escribir, ecos (palabras repetidas cerca) y conteo diario.
+- **Editor.** Hoja continua o páginas numeradas, saltos de página, navegación entre capítulos (anterior/siguiente, «Ir a…» con Ctrl/⌘ + K, Alt + AvPág/RePág) y revisión de una sola página. Deshacer propio, modo foco tipo máquina de escribir, ecos (palabras repetidas cerca) y conteo diario.
 - **Revisión rápida, sin IA.** Mientras escribes marca ortografía (diccionario de español), tildes que el diccionario no ve (¿qué?, él, tú, sé), dequeísmo y queísmo, diálogos con guion en vez de raya, mayúscula tras punto, comillas y paréntesis sin cerrar, palabras repetidas, puntuación y signos de apertura, frases y párrafos demasiado largos, inicios de frase repetidos, ecos, muletillas, gerundios y nombres que no coinciden con la biblia. Es gratis, instantánea y funciona sin conexión.
 - **Coherencia sin IA.** Cruza el texto con la biblia: edades que no calzan con la ficha («Elena, de cuarenta años» si la ficha dice 34), personajes marcados como muertos que hablan o actúan, nombres escritos juntos o separados («Rosamaría» / «Rosa María»), nombres que se repiten y no tienen ficha (con botón para crearla), duraciones que casi coinciden («tres años» y «cuarenta y dos meses») y fechas cuyo día de la semana no corresponde.
 - **Retrato del estilo.** En Estadísticas, con explicación de cada medida al pasar el cursor y una guía de lectura: legibilidad (Fernández Huerta), palabras por frase y variación del ritmo, riqueza léxica, proporción de diálogo, verbos de habla, adverbios en -mente, gerundios, pasiva y comparación entre capítulos. Son medidas descriptivas, no reglas.
@@ -17,12 +17,28 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 - **Rachas y seguimiento.** Racha actual y mejor racha, calendario de días escritos, palabras por semana, promedio por día, qué días y a qué hora escribes, y meta diaria opcional. Se ve en general (inicio y perfil, sumando todos tus proyectos) y en cada proyecto. En proyectos compartidos, tu seguimiento cuenta solo lo que escribiste tú.
 - **La IA prima.** Cuando revisa, la IA recibe las marcas automáticas como candidatas: confirma las correctas, descarta los falsos positivos (nombres propios, chilenismos, estilo buscado) y agrega lo que falta. Queda una sola lista, y lo descartado no vuelve a aparecer. Se puede desactivar en Ajustes.
 - **Revisión con IA, con tu propia clave.** Con una clave de Anthropic (Claude), OpenAI o un servicio compatible (OpenRouter, Ollama), revisa coherencia y ambigüedades, hace informes del capítulo, extrae datos a la biblia y responde preguntas sobre tu texto. La clave se guarda solo en tu navegador y el texto va directo al proveedor que elijas.
+- **Diálogos.** Atajos que solo insertan la raya: Alt + guion abre una línea de diálogo y Alt + I abre o cierra el inciso del narrador. «Revisar diálogos» (a pedido) señala espacios de más, rayas de cierre que faltan o sobran, puntuación del inciso y verbos en mayúscula, según las normas de la RAE.
 - **Notas.** Marcas propias, respuestas, correcciones aplicables, resueltas y cabos sueltos.
 - **Biblia.** Fichas por sección (personajes, lugares, mundo…), apariciones en el texto, cabos sueltos y decisiones.
 - **Diagramas.** Mapa de relaciones y línea de tiempo que compara el orden de la historia con el orden del relato. Se exportan en SVG y PNG.
 - **Historial.** Versiones automáticas y manuales por capítulo, comparación palabra por palabra y restauración.
 - **Importar y exportar.** Word (.docx, con las notas como comentarios), Markdown, texto, HTML y respaldo .json.
 - **Apariencia.** Temas, modo claro u oscuro, color de acento, tipografías, tamaño de letra, interlineado, ancho de hoja, márgenes y lado de las notas.
+
+## Atajos
+
+| Atajo | Qué hace |
+|---|---|
+| Ctrl/⌘ + Enter | Revisar con IA el párrafo donde estás |
+| Ctrl/⌘ + Shift + Enter | Revisar los párrafos editados |
+| Ctrl/⌘ + S | Guardar una versión |
+| Ctrl/⌘ + Shift + F | Buscar y reemplazar |
+| Ctrl/⌘ + K | Ir a… (capítulo, sección, página) |
+| Alt + AvPág / RePág | Capítulo siguiente / anterior |
+| Ctrl/⌘ + . (punto) | Modo foco |
+| Alt + - (guion) | Diálogo: línea nueva con raya |
+| Alt + I | Diálogo: abre o cierra el inciso |
+| ? | Ayuda |
 
 ## Tus datos
 

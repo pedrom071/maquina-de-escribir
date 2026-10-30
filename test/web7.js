@@ -52,8 +52,8 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   ok(/Anterior/i.test(nav) && /Prólogo/.test(nav) && /Siguiente/i.test(nav) && /Capítulo 2/.test(nav), 'navegación anterior/siguiente: ' + nav);
   await pg.keyboard.press('Alt+PageDown'); await sleep(600);
   ok(await pg.evaluate(() => App.cid === App.chapterList()[3].id), 'Alt+AvPág va al siguiente');
-  await pg.keyboard.press('Control+j'); await sleep(300);
-  ok(await pg.evaluate(() => !!document.querySelector('.pal')), 'paleta Ir a… con Ctrl+J');
+  await pg.keyboard.press('Control+k'); await sleep(300);
+  ok(await pg.evaluate(() => !!document.querySelector('.pal')), 'paleta Ir a… con Ctrl+K');
   await pg.keyboard.type('epil'); await pg.keyboard.press('Enter'); await sleep(600);
   ok(await pg.evaluate(() => (App.chapterList().find(c => c.id === App.cid) || {}).role === 'epilogo'), 'Ir a… lleva al epílogo');
   ok(/Epílogo/.test(await pg.evaluate(() => document.querySelector('#ch-eyebrow').textContent)), 'encabezado de sección especial');

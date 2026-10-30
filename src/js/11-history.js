@@ -66,7 +66,7 @@ const Versions = {
     if (!UI.drawerOpen('history')) return;
     body.textContent = '';
     const cur = App.ch(cid);
-    body.append(h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Cada vez que vuelves a editar un ' + App.unit().toLowerCase() + ' después de un rato, antes de reemplazar y cuando presionas ' + MOD + '+S, queda una versión. Elige una para ver qué cambió.' }));
+    body.append(h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Cada vez que vuelves a editar un ' + App.unit().toLowerCase() + ' después de un rato, antes de reemplazar y cuando presionas ' + keys('mod', 'S') + ', queda una versión. Elige una para ver qué cambió.' }));
     const preview = h('div', { class: 'diff', id: 'hist-diff' });
     const lst = h('div', { style: 'display:flex;flex-direction:column;gap:.4rem' });
     if (!list.length) lst.append(h('div', { class: 'empty', style: 'padding:1rem', text: 'Todavía no hay versiones guardadas de este texto.' }));

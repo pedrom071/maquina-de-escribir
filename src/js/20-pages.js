@@ -72,7 +72,7 @@ const Pages = {
     const box = h('nav', { class: 'ch-nav', 'aria-label': 'Navegar entre ' + kindOf(App.P()).units.toLowerCase() });
     const lab = (c) => this.label(c) + (c.title && c.title !== this.label(c) ? ': ' + c.title : '');
     box.append(prev ? h('button', { type: 'button', class: 'prev', onclick: () => this.goChapter(-1) }, h('span', { class: 'k', text: '← Anterior' }), h('span', { class: 't', text: lab(prev) })) : h('span'));
-    box.append(h('button', { type: 'button', class: 'mid', onclick: () => this.palette(), title: 'Ir a… (' + MOD + ' J)' }, 'Ir a…'));
+    box.append(h('button', { type: 'button', class: 'mid', onclick: () => this.palette(), title: 'Ir a… (' + keys('mod', 'K') + ')' }, 'Ir a…'));
     box.append(next ? h('button', { type: 'button', class: 'next', onclick: () => this.goChapter(1) }, h('span', { class: 'k', text: 'Siguiente →' }), h('span', { class: 't', text: lab(next) })) : (RT.canWrite ? h('button', { type: 'button', class: 'next', onclick: (e) => this.addMenu(e.currentTarget) }, h('span', { class: 'k', text: 'Agregar →' }), h('span', { class: 't', text: 'Nuevo ' + App.unit().toLowerCase() + ' o sección' })) : h('span')));
     return box;
   },
@@ -174,7 +174,7 @@ window.Pages = Pages;
 document.addEventListener('keydown', (e) => {
   if (!window.App || App.view !== 'project') return;
   const mod = e.metaKey || e.ctrlKey;
-  if (mod && !e.shiftKey && !e.altKey && (e.key === 'j' || e.key === 'J')) { e.preventDefault(); Pages.palette(); return; }
+  if (mod && !e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); Pages.palette(); return; }
   if (App.tab === 'escribir' && e.altKey && !mod && (e.key === 'PageDown' || e.key === 'PageUp')) { e.preventDefault(); Pages.goChapter(e.key === 'PageDown' ? 1 : -1); }
 });
 document.addEventListener('scroll', rafThrottle(() => { if (window.Editor && Editor.root) Pages.track(true); }), true);
