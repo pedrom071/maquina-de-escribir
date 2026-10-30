@@ -286,7 +286,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .focus .doc.dim p:not(.cur){opacity:.28}
 .marks-soft .doc .m:not(.off):not(.ort):not(.pend):not(.done){background:color-mix(in srgb,var(--t-bg) 45%,transparent)}
 .marks-strong .doc .m:not(.off):not(.ort):not(.pend):not(.done){box-shadow:inset 0 -2px 0 var(--t-fg)}
-.focus-exit{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(var(--gr) + 4px);z-index:50;opacity:.35}
+.focus-exit{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(var(--gr) + 4px);z-index:50;opacity:.35;display:flex;gap:.35rem;transition:opacity .2s}
 .focus-exit:hover{opacity:1}
 
 /* cajón lateral */
@@ -795,3 +795,16 @@ body.reading{overflow:hidden}
 .sk-size.on,.sk-erase.on{border-color:var(--accent);background:var(--accent-soft)}
 .sk-erase{border:1px solid var(--line2);background:var(--bg);border-radius:6px;padding:.2rem .6rem;font-size:.8rem;cursor:pointer;color:var(--ink)}
 .sk-canvas{width:100%;height:auto;aspect-ratio:900/560;border:1px solid var(--line);border-radius:4px;touch-action:none;cursor:crosshair;background:var(--sheet)}
+
+/* ---------- ultra foco: solo el texto ---------- */
+body.ultra .doc .m{background:none!important;border:0!important;box-shadow:none!important;text-decoration:none!important;color:inherit!important;padding:0!important;font-style:inherit!important;cursor:text}
+body.ultra .doc .m::after{content:none!important}
+body.ultra .doc p.dirty{box-shadow:none}
+body.ultra .doc.show-met>p::before,body.ultra .doc.show-met>p::after{content:none!important}
+body.ultra .doc>p.pb::before{border-top-color:transparent;color:transparent}
+body.ultra .ch-nav,body.ultra .idea-badge,body.ultra .ai-banner,body.ultra #toast,body.ultra .selbar,body.ultra .ch-eyebrow{display:none!important}
+body.ultra ::highlight(eco),body.ultra ::highlight(larga){text-decoration:none;background:none}
+body.ultra .focus-exit{opacity:.12}
+body.ultra .focus-exit:hover{opacity:.9}
+body.ultra .doc.dim p:not(.cur){opacity:.55}
+#ultra-btn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}

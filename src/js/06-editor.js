@@ -189,6 +189,7 @@ const Editor = {
       { sep: true },
       { label: 'Ver todas las notas en lista', onClick: () => this.notesDrawer() },
       { label: 'Modo foco', kbd: keys('mod', '.'), onClick: () => this.setFocus(true) },
+      { label: 'Ultra foco: solo escribir, sin marcas', kbd: keys('mod', 'shift', '.'), onClick: () => this.setUltra(true) },
       { label: 'Leer como libro (una o dos páginas)', kbd: keys('mod', 'shift', 'L'), onClick: () => Lectura.open(this.cid) }
     ]);
   },
@@ -218,8 +219,8 @@ const Editor = {
     r.addEventListener('paste', (e) => this.onPaste(e));
     r.addEventListener('compositionstart', () => { this.composing = true; });
     r.addEventListener('compositionend', () => { this.composing = false; setTimeout(() => { this.sync('insertCompositionText'); if (this.pendingRemote) this.onRemote('merge'); }, 0); });
-    r.addEventListener('click', (e) => { const m = e.target.closest('.m'); if (m && !m.classList.contains('off') && !document.body.classList.contains('clean')) this.setActive(m.dataset.id, true); });
-    r.addEventListener('mouseover', (e) => { const m = e.target.closest('.m'); this.hover(m ? m.dataset.id : null); });
+    r.addEventListener('click', (e) => { const m = e.target.closest('.m'); if (m && !m.classList.contains('off') && !document.body.classList.contains('clean') && !App.ultra) this.setActive(m.dataset.id, true); });
+    r.addEventListener('mouseover', (e) => { const m = e.target.closest('.m'); if (!App.ultra) this.hover(m ? m.dataset.id : null); });
     r.addEventListener('mouseleave', () => this.hover(null));
     r.addEventListener('dragstart', (e) => { if (!RT.canWrite) e.preventDefault(); });
     r.addEventListener('blur', () => { setTimeout(() => { if (this.pendingRemote && document.activeElement !== this.root) this.onRemote('merge'); }, 50); });
@@ -937,12 +938,29 @@ const Editor = {
   },
 
   /* ---------- modo foco ---------- */
+  /* Ultra foco: dentro del modo foco, sin marcas, colores, subrayados ni revisión automática. Al salir, se revisa lo escrito. */
+  setUltra(on) {
+    if (on && !App.focus) this.setFocus(true);
+    const was = !!App.ultra;
+    App.ultra = !!on;
+    document.body.classList.toggle('ultra', App.ultra);
+    if (this.root) this.root.spellcheck = !App.ultra;
+    const b = $('#ultra-btn'); if (b) { b.setAttribute('aria-pressed', App.ultra ? 'true' : 'false'); b.textContent = App.ultra ? 'Ultra foco ✓' : 'Ultra foco'; }
+    if (was && !App.ultra && this.cid) {
+      // al volver, el revisor mira lo que escribiste mientras tanto
+      const dirty = Array.from(this.dirty.get(this.cid) || []);
+      if (dirty.length && App.prefs.autoLocal !== false) Checker.run(this.cid, dirty.slice(0, 60), true);
+    }
+  },
   setFocus(on) {
     App.focus = on;
     document.body.classList.toggle('focus', on);
+    if (!on && App.ultra) this.setUltra(false);
     const old = $('#focus-exit'); if (old) old.remove();
     if (on) {
-      document.body.append(h('button', { class: 'btn small focus-exit', id: 'focus-exit', type: 'button', onclick: () => this.setFocus(false) }, 'Salir del foco · Esc'));
+      document.body.append(h('div', { class: 'focus-exit', id: 'focus-exit' },
+        h('button', { class: 'btn small', id: 'ultra-btn', type: 'button', 'aria-pressed': App.ultra ? 'true' : 'false', title: 'Sin marcas, colores ni revisión: solo escribir (' + keys('mod', 'shift', '.') + ')', onclick: () => this.setUltra(!App.ultra) }, App.ultra ? 'Ultra foco ✓' : 'Ultra foco'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => this.setFocus(false) }, 'Salir · Esc')));
       if (this.root) { this.root.classList.toggle('dim', App.prefs.focusDim !== false); this.root.focus(); if (this.lastCaret) this.setCaret(this.lastCaret); this.markCurrent(); setTimeout(() => this.typewriter(), 50); }
     } else if (this.root) { this.root.classList.remove('dim'); $$('p.cur', this.root).forEach(p => p.classList.remove('cur')); this.layoutSoon(); }
   },

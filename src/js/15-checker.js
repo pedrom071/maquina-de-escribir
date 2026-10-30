@@ -261,7 +261,7 @@ const Checker = {
     return { added: added, removed: removed };
   },
   schedule(cid, pid) {
-    if (!RT.canWrite || App.prefs.autoLocal === false) return;
+    if (!RT.canWrite || App.prefs.autoLocal === false || App.ultra) return;
     clearTimeout(this.timers.get(pid));
     this.timers.set(pid, setTimeout(() => {
       this.timers.delete(pid);

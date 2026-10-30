@@ -62,7 +62,7 @@ const Review = {
   onEdit(cid, pid) {
     if (window.Checker) Checker.schedule(cid, pid);
     const aiAuto = RT.web ? (App.prefs.autoAI === true && AI.ready()) : App.prefs.auto;
-    if (!aiAuto || !RT.sample || this.disabled || !RT.canWrite) return;
+    if (!aiAuto || !RT.sample || this.disabled || !RT.canWrite || App.ultra) return;
     clearTimeout(this.timers.get('auto'));
     this.timers.set('auto', setTimeout(() => {
       const d = App.ch(cid); if (!d || !d.data || Editor.composing) return;

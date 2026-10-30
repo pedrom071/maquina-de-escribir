@@ -30,6 +30,17 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   await pg.keyboard.press('Control+k'); await sleep(300);
   ok(await pg.evaluate(() => /Por escribir/i.test(document.querySelector('.pal').innerText)), '«Ir a…» lista los huecos por escribir');
   await pg.keyboard.press('Escape'); await sleep(200);
+  // ultra foco
+  await pg.evaluate(() => { App.prefs.autoLocal = true; return Checker.run(App.cid); }); await sleep(300);
+  await pg.keyboard.press('Control+Shift+Period'); await sleep(300);
+  const u = await pg.evaluate(() => ({ ultra: document.body.classList.contains('ultra'), focus: document.body.classList.contains('focus'), spell: Editor.root.spellcheck, bg: getComputedStyle(document.querySelector('#doc .m')).backgroundColor, num: getComputedStyle(document.querySelector('#doc .m'), '::after').content }));
+  ok(u.ultra && u.focus && !u.spell && (u.bg === 'rgba(0, 0, 0, 0)' || u.bg === 'transparent') && u.num === 'none', 'ultra foco: sin marcas, colores ni subrayado ' + JSON.stringify(u));
+  await pg.evaluate(() => { Editor.root.focus(); Editor.setCaret({ pid: App.ch(App.cid).data.paras[4].id, off: 1e9 }); }); await pg.keyboard.type(' Y el el viento.'); await sleep(2200);
+  ok(await pg.evaluate(() => !MDE.allMarks(App.ch(App.cid).data).some(x => x.m.rule === 'dup')), 'en ultra foco no aparecen marcas nuevas');
+  await pg.keyboard.press('Escape'); await sleep(1500);
+  ok(await pg.evaluate(() => !document.body.classList.contains('ultra') && !document.body.classList.contains('focus')), 'Esc sale del foco y del ultra foco');
+  ok(await pg.evaluate(() => MDE.allMarks(App.ch(App.cid).data).some(x => x.m.rule === 'dup')), 'al salir, el revisor revisa lo escrito');
+  await pg.evaluate(() => { App.prefs.autoLocal = false; });
   // ideas
   await pg.evaluate(() => App.go('p-' + App.pid + '-ideas')); await sleep(600);
   const add = async (t) => { await pg.fill('#idea-in', t); await pg.keyboard.press('Control+Enter'); await sleep(350); };

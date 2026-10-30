@@ -724,7 +724,8 @@ const App = {
       else this.toast('Todo se guarda solo.');
       return;
     }
-    if (mod && (e.key === '.' || e.code === 'Period' || e.code === 'NumpadDecimal') && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
+    if (mod && e.shiftKey && (e.code === 'Period' || e.key === '>' || e.key === ':') && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setUltra(!this.ultra); return; }
+    if (mod && !e.shiftKey && (e.key === '.' || e.code === 'Period' || e.code === 'NumpadDecimal') && this.tab === 'escribir' && window.Editor && Editor.root) { e.preventDefault(); Editor.setFocus(!this.focus); return; }
     if (!typing && !mod && e.key === '?') { e.preventDefault(); this.help(); }
   },
   help() {
@@ -737,6 +738,7 @@ const App = {
       [keys('mod', 'K'), 'Ir a… (capítulo, sección, página)'],
       [keys('alt', 'pgdn') + ' / ' + keys('alt', 'pgup'), 'Capítulo siguiente / anterior'],
       [keys('mod', '.'), 'Modo foco (máquina de escribir)'],
+      [keys('mod', 'shift', '.'), 'Ultra foco: solo escribir, sin marcas ni revisión'],
       [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
