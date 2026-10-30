@@ -48,6 +48,7 @@ const App = {
     Profile.attach(this.colls.mine);
     if (RT.web) {
       $('#btn-share').hidden = true;
+      AI.refreshPill();
       window.addEventListener('pagehide', () => { Store.flushAll(); IDB.flush(); });
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { Store.flushAll(); setTimeout(() => IDB.flush(), 50); } });
       if (window.Spell) setTimeout(() => Spell.init(), 1500);
@@ -107,6 +108,7 @@ const App = {
         h('div', { class: 'peers', id: 'peers' }),
         h('span', { class: 'save', id: 'save-st', role: 'status' }),
         ibtn('search', 'Buscar en el proyecto (' + MOD + '+Shift+F)', () => window.Search && Search.open(), { id: 'btn-search', hidden: true }),
+        h('button', { class: 'ai-pill off', id: 'btn-ai', type: 'button', hidden: true, onclick: () => AI.open() }),
         ibtn('people', 'Colaborar', () => window.Collab && Collab.openPanel(), { id: 'btn-share' }),
         h('button', { class: 'ibtn me-btn', id: 'btn-me', type: 'button', 'aria-label': 'Tu perfil y apariencia', title: 'Tu perfil y apariencia', onclick: () => Profile.open() }, icon('palette')),
         h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Atajos y ayuda', title: 'Atajos y ayuda', onclick: () => this.help(), text: '?' })
@@ -202,7 +204,7 @@ const App = {
     ];
     const ol = h('ol', { class: 'steps' });
     steps.forEach(([t, d]) => ol.append(h('li', null, h('b', { text: t }), h('span', { text: d }))));
-    return h('div', { class: 'panel onboard' }, h('h3', { text: 'Para empezar' }), ol, h('div', { class: 'row' }, btn('Nuevo proyecto', () => this.newProject({ space: 'mine' }), 'primary'), btn('Importar un texto', () => IO.openImport(null)), btn('Apariencia', () => Profile.open())));
+    return h('div', { class: 'panel onboard' }, h('h3', { text: 'Para empezar' }), ol, h('div', { class: 'row' }, btn('Nuevo proyecto', () => this.newProject({ space: 'mine' }), 'primary'), btn('Importar un texto', () => IO.openImport(null)), RT.web && !AI.ready() ? btn([icon('spark'), 'Conectar IA'], () => AI.open()) : null, btn('Apariencia', () => Profile.open())));
   },
   projectCard(d, space) {
     const P = d.data, k = kindOf(P), st = P.stats || {};

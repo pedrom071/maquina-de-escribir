@@ -49,7 +49,15 @@ const Editor = {
     this.margin = h('div', { class: 'margin', id: 'margin', 'aria-label': 'Notas del corrector' });
     this.paper.append(eyebrow, this.titleEl, this.root);
     this.writeEl.append(this.paper, this.margin);
-    stage.append(bar, this.writeEl);
+    stage.append(bar);
+    if (RT.web && RT.canWrite && !AI.ready() && !App.prefs.aiBannerOff) {
+      const ban = h('div', { class: 'ai-banner', role: 'note' },
+        icon('spark'),
+        h('div', null, h('b', { text: 'Estás usando la revisión básica.' }), ' Marca ortografía, repeticiones y frases largas. Conecta tu IA para que además revise coherencia, ambigüedades y te haga informes.'),
+        h('div', { class: 'row' }, btn('Conectar IA', () => AI.open(), 'primary small'), btn('Ahora no', () => { App.prefs.aiBannerOff = true; App.savePrefs(); ban.remove(); }, 'ghost small')));
+      stage.append(ban);
+    }
+    stage.append(this.writeEl);
     this.bind();
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
     this.ro = new ResizeObserver(() => { this.checkNarrow(); this.layoutSoon(); });

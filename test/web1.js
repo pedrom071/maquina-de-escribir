@@ -17,7 +17,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   let apiCalls = [];
   await pg.route('https://api.anthropic.com/v1/messages', async (route) => {
     const req = route.request(); const body = JSON.parse(req.postData()); apiCalls.push({ h: req.headers(), body });
-    if (req.headers()['x-api-key'] !== 'sk-ok') return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }) });
+    if (!/^sk-ant-ok/.test(req.headers()['x-api-key'])) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }) });
     const prompt = body.messages[body.messages.length - 1].content;
     let out = 'listo';
     if (prompt.includes('PÁRRAFO A REVISAR')) { const para = prompt.split('PÁRRAFO A REVISAR:\n')[1]; const w = para.split(/\s+/); out = JSON.stringify([{ type: 'coh', text: w.slice(w.length - 3).join(' '), note: 'IA: prueba de coherencia.' }]); }
@@ -46,12 +46,13 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   }
   // IA sin configurar → abre ajustes
   await pg.evaluate(() => { const p = App.ch(App.cid).data.paras[0]; Review.reviewPara(App.cid, p.id, true); }); await sleep(300);
-  console.log('C modal', await pg.locator('.modal h3').textContent());
-  await pg.locator('#ai-key').fill('sk-mala'); await pg.locator('.modal .btn', { hasText: 'Probar conexión' }).click(); await sleep(600);
-  console.log('   bad key:', await pg.locator('.modal [role=status]').textContent());
-  await pg.locator('#ai-key').fill('sk-ok'); await pg.locator('#ai-model-sel').selectOption('claude-haiku-5-5'); await pg.locator('.modal .btn', { hasText: 'Probar conexión' }).click(); await sleep(600);
-  console.log('   good key:', await pg.locator('.modal [role=status]').textContent(), '| headers ok', apiCalls[apiCalls.length - 1].h['anthropic-dangerous-direct-browser-access'], apiCalls[apiCalls.length - 1].body.model);
-  await pg.locator('.modal .btn.primary').click(); await sleep(500);
+  console.log('C modal', await pg.locator('.modal h3').textContent(), '| pill', await pg.locator('#btn-ai').textContent(), '| banner', await pg.locator('.ai-banner').count());
+  await pg.locator('#ai-key').fill('sk-ant-mala-0000000000000000000000'); await sleep(1300);
+  console.log('   bad key:', await pg.locator('.ai-status').textContent(), '| provider', await pg.locator('.kopt[aria-checked=true] b').textContent());
+  await pg.locator('#ai-key').fill('sk-ant-ok-1234567890abcdefghijklmn'); await sleep(1300);
+  console.log('   good key:', await pg.locator('.ai-status').textContent());
+  await pg.locator('.modal .btn.primary').click(); await sleep(1200);
+  console.log('   saved?', await pg.evaluate(() => [AI.ready(), AI.cfg().model, App.prefs.autoAI]), '| modal open', await pg.locator('.modal').count(), '| pill', await pg.locator('#btn-ai').textContent(), '| banner', await pg.locator('.ai-banner').count());
   await pg.evaluate(() => { const p = App.ch(App.cid).data.paras[0]; Review.reviewPara(App.cid, p.id, true); }); await sleep(1200);
   console.log('D ai marks', await pg.evaluate(() => MDE.allMarks(App.ch(App.cid).data).filter(x => x.m.by === 'claude').map(x => x.m.text + ': ' + x.m.note)), '| both kept', await pg.evaluate(() => MDE.allMarks(App.ch(App.cid).data).filter(x => x.m.by === 'revisor').length));
   // informe con streaming

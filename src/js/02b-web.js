@@ -119,7 +119,7 @@ const AI = {
   cfg() { try { return Object.assign({ provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }, JSON.parse(localStorage.getItem(AI_KEY) || '{}')); } catch (e) { return { provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }; } },
   save(c) { try { localStorage.setItem(AI_KEY, JSON.stringify(c)); } catch (e) {} },
   ready() { const c = this.cfg(); return !!(c.key || (c.provider === 'compat' && c.base)) && !!c.model; },
-  label() { const c = this.cfg(); return c.provider === 'anthropic' ? 'Claude' : 'IA'; },
+  label() { const c = this.cfg(); return c.provider === 'anthropic' || /claude/.test(c.model || '') ? 'Claude' : 'IA'; },
   turns(input) {
     const list = typeof input === 'string' ? [{ role: 'user', content: input }] : input.slice();
     const out = [];
@@ -192,58 +192,116 @@ const AI = {
     return f;
   },
 
-  /* ---------- ajustes ---------- */
+  /* ---------- conexión, en pocos pasos ---------- */
+  guess(key) {
+    if (/^sk-ant-/.test(key)) return 'anthropic';
+    if (/^sk-or-/.test(key)) return 'openrouter';
+    if (/^sk-(proj|svcacct|admin)-/.test(key) || (/^sk-[A-Za-z0-9]{40,}$/.test(key))) return 'openai';
+    return null;
+  },
+  modelName() { const c = this.cfg(); const m = (AI_MODELS.anthropic.find(x => x[0] === c.model) || [])[1]; return m ? m.split(' · ')[0] : c.model; },
+  refreshPill() {
+    const b = $('#btn-ai'); if (!b) return;
+    b.hidden = !RT.web;
+    b.textContent = '';
+    const on = this.ready();
+    b.className = 'ai-pill ' + (on ? 'on' : 'off');
+    b.append(icon('spark'), h('span', { class: 'lbl', text: on ? 'IA · ' + this.modelName() : 'Conectar IA' }));
+    b.title = on ? 'IA conectada. Toca para cambiarla.' : 'Conecta tu IA para revisar coherencia, hacer informes y preguntar sobre tu texto';
+  },
   open() {
     const c = this.cfg();
-    const prov = h('select', { class: 'sel', id: 'ai-prov' },
-      h('option', { value: 'anthropic', text: 'Anthropic (Claude)' }),
-      h('option', { value: 'openai', text: 'OpenAI' }),
-      h('option', { value: 'compat', text: 'Otro compatible con OpenAI (OpenRouter, Ollama…)' }));
-    prov.value = c.provider;
-    const key = h('input', { class: 'inp', id: 'ai-key', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'Pega aquí tu clave de API', value: c.key });
+    let prov = c.provider === 'compat' && /openrouter/.test(c.base || '') ? 'openrouter' : (c.provider || 'anthropic');
+    let tested = this.ready();
+    const PROVS = {
+      anthropic: { n: 'Claude', d: 'Anthropic · recomendado', url: 'https://console.anthropic.com/settings/keys', site: 'console.anthropic.com',
+        steps: ['Abre la consola de Anthropic e inicia sesión. Es una cuenta distinta de tu suscripción a claude.ai, pero puedes usar el mismo correo.', 'En «Billing», carga algunos dólares de saldo. Revisar un párrafo cuesta menos de un centavo.', 'En «API keys», crea una clave y cópiala. Empieza por «sk-ant-».'] },
+      openai: { n: 'OpenAI', d: 'ChatGPT y otros', url: 'https://platform.openai.com/api-keys', site: 'platform.openai.com',
+        steps: ['Abre la plataforma de OpenAI e inicia sesión.', 'Carga saldo en «Billing».', 'Crea una clave en «API keys» y cópiala.'] },
+      openrouter: { n: 'OpenRouter', d: 'Muchos modelos, una clave', url: 'https://openrouter.ai/keys', site: 'openrouter.ai',
+        steps: ['Abre OpenRouter e inicia sesión.', 'Carga créditos.', 'Crea una clave y cópiala. Empieza por «sk-or-».'] },
+      compat: { n: 'Otro', d: 'Ollama u otro servicio', url: null, site: '',
+        steps: ['Escribe la dirección del servicio en «Opciones avanzadas» (para Ollama: http://localhost:11434/v1).', 'Escribe el nombre del modelo.', 'Si el servicio no pide clave, deja el campo vacío.'] }
+    };
+    const DEF_MODEL = { anthropic: 'claude-sonnet-5-5', openai: '', openrouter: 'anthropic/claude-sonnet-5-5', compat: '' };
+    const cards = h('div', { class: 'kinds', role: 'radiogroup', 'aria-label': 'Proveedor' });
+    const steps = h('ol', { class: 'ai-steps' });
+    const key = h('input', { class: 'inp', id: 'ai-key', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'Pega aquí tu clave', value: c.key });
+    const status = h('p', { class: 'ai-status', role: 'status' });
     const modelSel = h('select', { class: 'sel', id: 'ai-model-sel' });
-    const modelInp = h('input', { class: 'inp', id: 'ai-model', spellcheck: 'false', placeholder: 'Nombre exacto del modelo', value: c.model });
-    const base = h('input', { class: 'inp', id: 'ai-base', spellcheck: 'false', placeholder: 'https://openrouter.ai/api/v1 o http://localhost:11434/v1', value: c.base });
-    const help = h('p', { class: 'muted', style: 'margin:0;font-size:.82rem' });
-    const status = h('p', { class: 'muted', style: 'margin:0;font-size:.85rem;min-height:1.2em', role: 'status' });
-    const baseRow = h('label', { class: 'field' }, h('span', { text: 'Dirección del servicio' }), base);
+    AI_MODELS.anthropic.forEach(([v, l]) => modelSel.append(h('option', { value: v, text: l })));
+    const modelInp = h('input', { class: 'inp', id: 'ai-model', spellcheck: 'false', placeholder: 'Nombre exacto del modelo' });
+    const base = h('input', { class: 'inp', id: 'ai-base', spellcheck: 'false', placeholder: 'http://localhost:11434/v1', value: c.base || '' });
     const selRow = h('label', { class: 'field' }, h('span', { text: 'Modelo' }), modelSel);
     const inpRow = h('label', { class: 'field' }, h('span', { text: 'Modelo' }), modelInp);
-    const sync = () => {
-      const p = prov.value;
-      baseRow.hidden = p !== 'compat';
-      selRow.hidden = p !== 'anthropic'; inpRow.hidden = p === 'anthropic';
-      modelSel.textContent = '';
-      (AI_MODELS[p] || []).forEach(([v, l]) => modelSel.append(h('option', { value: v, text: l })));
-      if (p === 'anthropic') { modelSel.value = AI_MODELS.anthropic.some(m => m[0] === modelInp.value) ? modelInp.value : 'claude-sonnet-5-5'; }
-      help.textContent = '';
-      if (p === 'anthropic') help.append('Crea una clave en ', h('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener', text: 'console.anthropic.com' }), '. Se paga por uso, aparte de una suscripción a claude.ai. Revisar un párrafo cuesta una fracción de centavo.');
-      else if (p === 'openai') help.append('Crea una clave en ', h('a', { href: 'https://platform.openai.com/api-keys', target: '_blank', rel: 'noopener', text: 'platform.openai.com' }), '. Escribe el nombre del modelo tal como aparece en tu cuenta.');
-      else help.append('Cualquier servicio con la API de OpenAI. Para Ollama en tu computador, usa http://localhost:11434/v1 sin clave y permite el origen de esta página en Ollama.');
+    const baseRow = h('label', { class: 'field' }, h('span', { text: 'Dirección del servicio' }), base);
+    const adv = h('details', { class: 'ai-adv' }, h('summary', { text: 'Opciones avanzadas' }), h('div', { style: 'display:flex;flex-direction:column;gap:.7rem;margin-top:.7rem' }, selRow, inpRow, baseRow));
+    if (prov === 'anthropic') modelSel.value = AI_MODELS.anthropic.some(m => m[0] === c.model) ? c.model : 'claude-sonnet-5-5'; else modelInp.value = c.model || DEF_MODEL[prov];
+    const setStatus = (t, kind) => { status.textContent = t; status.dataset.k = kind || ''; };
+    const render = () => {
+      $$('.kopt', cards).forEach(x => x.setAttribute('aria-checked', x.dataset.p === prov ? 'true' : 'false'));
+      const P = PROVS[prov];
+      steps.textContent = '';
+      P.steps.forEach((t, i) => { const li = h('li', null, h('span', { text: t })); if (i === 0 && P.url) li.append(' ', h('a', { href: P.url, target: '_blank', rel: 'noopener', class: 'btn small', text: 'Abrir ' + P.site })); steps.append(li); });
+      steps.append(h('li', null, h('span', { text: prov === 'compat' ? 'Prueba la conexión.' : 'Pégala aquí abajo. Se prueba sola.' })));
+      selRow.hidden = prov !== 'anthropic'; inpRow.hidden = prov === 'anthropic'; baseRow.hidden = prov !== 'compat';
+      if (prov !== 'anthropic' && !modelInp.value) modelInp.value = DEF_MODEL[prov];
+      if (prov === 'openai' || prov === 'compat') adv.open = true;
     };
-    prov.addEventListener('change', sync); sync();
-    const collect = () => ({ provider: prov.value, key: key.value.trim(), model: prov.value === 'anthropic' ? modelSel.value : modelInp.value.trim(), base: base.value.trim() });
-    const test = btn('Probar conexión', async () => {
-      const prev = this.cfg(); this.save(collect());
-      status.textContent = 'Probando…';
-      try { const r = await this.stream('Responde solo con la palabra: listo', { maxTokens: 20 }); status.textContent = 'Funciona. Respuesta: «' + r.text.trim().slice(0, 40) + '».'; }
-      catch (e) { status.textContent = this.explain(e); this.save(prev); }
-    }, 'small');
-    UI.modal({
-      title: 'Inteligencia artificial',
-      body: h('div', { style: 'display:flex;flex-direction:column;gap:.85rem' },
-        h('p', { class: 'muted', style: 'margin:0;font-size:.88rem', text: 'La revisión rápida (ortografía, repeticiones, frases largas, puntuación) funciona sin IA. Con tu propia clave, además revisas coherencia y ambigüedades, haces informes, extraes datos a la biblia y preguntas sobre tu texto.' }),
-        h('label', { class: 'field' }, h('span', { text: 'Proveedor' }), prov),
-        baseRow,
-        h('label', { class: 'field' }, h('span', { text: 'Clave de API' }), key),
-        selRow, inpRow, help,
-        h('div', { class: 'row' }, test, status),
-        h('p', { class: 'muted', style: 'margin:0;font-size:.8rem', text: 'Tu clave queda guardada solo en este navegador y nunca pasa por otro servidor. Tu texto se envía directamente al proveedor que elijas, y solo cuando pides una revisión.' })),
+    Object.keys(PROVS).forEach(k => {
+      const b = h('button', { class: 'kopt', type: 'button', role: 'radio', dataset: { p: k } }, h('b', { text: PROVS[k].n }), h('span', { text: PROVS[k].d }));
+      b.addEventListener('click', () => { prov = k; tested = false; setStatus(''); render(); });
+      cards.append(b);
+    });
+    const collect = () => ({
+      provider: prov === 'openrouter' ? 'compat' : prov,
+      key: key.value.trim(),
+      model: prov === 'anthropic' ? modelSel.value : modelInp.value.trim(),
+      base: prov === 'openrouter' ? 'https://openrouter.ai/api/v1' : prov === 'compat' ? base.value.trim() : ''
+    });
+    let seq = 0;
+    const test = async () => {
+      const n = collect();
+      if (!n.model) { setStatus('Escribe el nombre del modelo en «Opciones avanzadas».', 'bad'); adv.open = true; return false; }
+      if (!n.key && prov !== 'compat') { setStatus('Falta la clave.', 'bad'); return false; }
+      const my = ++seq, prev = this.cfg();
+      this.save(n); setStatus('Probando la conexión…', 'wait');
+      try { await this.stream('Responde solo con la palabra: listo', { maxTokens: 20 }); if (my === seq) { tested = true; setStatus('Conectado. Ya puedes guardar.', 'ok'); } return true; }
+      catch (e) { if (my === seq) { tested = false; setStatus(this.explain(e), 'bad'); } this.save(prev); return false; }
+    };
+    const autoTest = debounce(() => { if (key.value.trim().length > 25) test(); }, 500);
+    key.addEventListener('input', () => {
+      const g = this.guess(key.value.trim());
+      if (g && g !== prov && prov !== 'compat') { prov = g; render(); }
+      tested = false; setStatus(''); autoTest();
+    });
+    render();
+    if (tested) setStatus('Conectada: ' + PROVS[prov].n + ' · ' + (collect().model || '') + '.', 'ok');
+    const finish = () => {
+      const n = collect();
+      if (!tested) { test().then(ok => { if (ok) finish(); }); return false; }
+      const first = !AI.ready() || prev0 !== JSON.stringify(n);
+      this.save(n);
+      if (App.prefs.autoAI === undefined || first) App.prefs.autoAI = true;
+      App.savePrefs(); Review.disabled = false;
+      this.refreshPill();
+      App.toast('IA conectada. Revisa sola al hacer una pausa; también con ' + MOD + ' + Enter.');
+      if (Editor.root) { Editor.unmount(); App.renderStage(); }
+      close();
+    };
+    const prev0 = JSON.stringify(this.cfg());
+    const close = UI.modal({
+      title: 'Conectar tu IA',
+      body: h('div', { class: 'ai-setup' },
+        h('p', { class: 'muted', style: 'margin:0', text: 'Con IA, el revisor lee como un editor: coherencia con la biblia y lo ya escrito, frases ambiguas, informes y preguntas sobre tu texto. Necesitas una clave de API; se configura una sola vez.' }),
+        cards, steps, key, status, adv,
+        h('p', { class: 'muted', style: 'margin:0;font-size:.78rem', text: 'Tu clave queda solo en este navegador y nunca pasa por otro servidor. Tu texto va directo al proveedor, solo cuando se revisa.' })),
       buttons: [
-        { label: 'Borrar clave', onClick: () => { this.save({ provider: prov.value, key: '', model: '', base: '' }); App.toast('Clave borrada de este navegador.'); } },
-        { label: 'Guardar', cls: 'primary', onClick: () => { const n = collect(); if (!n.model) { status.textContent = 'Falta el nombre del modelo.'; return false; } this.save(n); Review.disabled = false; App.toast(this.ready() ? 'Listo: la revisión con IA está activa.' : 'Guardado.'); if (Editor.root) { Editor.unmount(); App.renderStage(); } } }
+        { label: this.ready() ? 'Desconectar' : 'Ahora no', onClick: () => { if (this.ready()) { this.save({ provider: prov === 'openrouter' ? 'compat' : prov, key: '', model: '', base: '' }); this.refreshPill(); App.toast('IA desconectada de este navegador.'); if (Editor.root) { Editor.unmount(); App.renderStage(); } } } },
+        { label: 'Guardar y activar', cls: 'primary', onClick: finish }
       ]
     });
+    setTimeout(() => { if (!key.value) key.focus(); }, 40);
   },
   explain(e) {
     const c = e && e.code;
