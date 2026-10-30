@@ -648,6 +648,31 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 .pal-it .s{color:var(--soft);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
 .pal-it.on,.pal-it:hover{background:var(--accent-soft)}
 
+/* ---------- partes y carpetas ---------- */
+.chi.part{margin-top:.5rem}
+.chi.part .go{font-weight:600}
+.chi.part .go .t{font:500 .7188rem/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.chi.part .tog{border:0;background:none;color:var(--soft);cursor:pointer;width:1.4rem;padding:0;font-size:.75rem;flex:0 0 auto}
+.chi.in-part .go{padding-left:1.4rem}
+.fbar{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:-.4rem 0 1rem}
+.fbar .spacer{flex:1}
+.fchip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line2);background:var(--sheet);border-radius:999px;padding:.32rem .7rem;font-size:.8125rem;color:var(--ink);cursor:pointer}
+.fchip svg{width:14px;height:14px}
+.fchip b{font:500 .6875rem var(--f-mono);color:var(--soft)}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.fchip.on b{color:var(--accent-ink);opacity:.8}
+.fchip.add{border-style:dashed;background:none;color:var(--soft)}
+.pgroup{grid-column:1/-1;display:flex;align-items:center;gap:.45rem;border:0;background:none;padding:.6rem 0 0;cursor:pointer;color:var(--ink);font:400 1.15rem var(--f-display);text-align:left}
+.pgroup svg{width:16px;height:16px;color:var(--accent)}
+.pgroup b{font:500 .7rem var(--f-mono);color:var(--soft)}
+.join{display:flex;flex-direction:column;gap:.8rem;min-width:min(30rem,82vw)}
+.join-list{display:flex;flex-direction:column;max-height:min(40vh,18rem);overflow:auto;border:1px solid var(--line);border-radius:4px}
+.join-it{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.6rem;padding:.5rem .7rem;border-bottom:1px solid var(--line);cursor:pointer}
+.join-it input{grid-row:1/3;align-self:center}
+.join-it .t{font-size:.9rem}
+.join-it .s{font-size:.75rem;color:var(--soft)}
+.join-it:hover{background:var(--accent-soft)}
+
 </style>
 </head>
 <body>
@@ -656,7 +681,7 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '9b0b3ebb4b';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = 'dcde23042f';</script>
 <script>
 (function () {
 'use strict';
@@ -1613,6 +1638,8 @@ const ICONS = {
   more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
   pen: '<path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
+  grid: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
   book: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
   graph: '<circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 8.3l2.6 7.4M15.8 8.3l-2.6 7.4M8.5 7h7"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -1966,8 +1993,19 @@ const App = {
     if (!RT.canWrite && !RT.local) wrap.append(h('div', { class: 'panel onboard' }, h('h3', { text: 'Estás en modo lectura' }), h('p', { class: 'muted', style: 'margin:0', text: 'Puedes ver los proyectos compartidos, pero no escribir. Para tener tus propios proyectos aquí, pide a quien te compartió esta herramienta que te invite con permiso de edición.' })));
     const hasTeam = !!this.colls.team;
     wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: hasTeam ? 'Mis proyectos' : 'Proyectos' }), hasTeam ? h('span', { class: 'muted', text: 'Solo tú los ves.' }) : null));
+    const fb = Collections.folderBar(mine.concat(team));
+    if (fb) wrap.append(fb.bar);
+    const inFolder = (x) => !fb || !fb.cur || x.doc.data.folder === fb.cur;
     const grid = h('div', { class: 'pgrid' });
-    mine.forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
+    const mineShown = mine.filter(inFolder);
+    if (fb && !fb.cur && Collections.folders().length) {
+      // agrupados por carpeta
+      const groups = new Map(); mineShown.forEach(x => { const f = x.doc.data.folder || ''; if (!groups.has(f)) groups.set(f, []); groups.get(f).push(x); });
+      Array.from(groups.keys()).sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, 'es')).forEach(f => {
+        if (f) grid.append(h('button', { type: 'button', class: 'pgroup', onclick: () => { this.prefs.homeFolder = f; this.savePrefs(); this.renderHomeSoon(); } }, icon('folder'), h('span', { text: f }), h('b', { text: String(groups.get(f).length) })));
+        groups.get(f).forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
+      });
+    } else mineShown.forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
     if (RT.canWrite && this.colls.mine) grid.append(h('button', { class: 'pcard new', type: 'button', onclick: () => this.newProject({ space: 'mine' }) }, icon('plus'), h('span', { text: 'Nuevo proyecto' })));
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
@@ -1976,7 +2014,7 @@ const App = {
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
       const tg = h('div', { class: 'pgrid' });
-      team.forEach(x => tg.append(this.projectCard(x.doc, 'team')));
+      team.filter(inFolder).forEach(x => tg.append(this.projectCard(x.doc, 'team')));
       if (RT.canWrite) tg.append(h('button', { class: 'pcard new', type: 'button', onclick: () => this.newProject({ space: 'team' }) }, icon('plus'), h('span', { text: 'Nuevo proyecto compartido' })));
       else if (!team.length) tg.append(h('div', { class: 'empty', text: 'No hay proyectos compartidos.' }));
       wrap.append(tg);
@@ -2006,7 +2044,7 @@ const App = {
   projectCard(d, space) {
     const P = d.data, k = kindOf(P), st = P.stats || {};
     const card = h('div', { class: 'pcard', role: 'link', tabindex: '0', onclick: (e) => { if (!e.target.closest('.more')) this.go('p-' + d.id); }, onkeydown: (e) => { if (e.key === 'Enter' && e.target === card) this.go('p-' + d.id); } });
-    card.append(h('div', { class: 'row', style: 'justify-content:space-between;gap:.3rem' }, h('span', { class: 'label', text: k.label + (space === 'team' ? ' · compartido' : '') }), RT.canWrite ? ibtn('more', 'Opciones de «' + P.title + '»', (e) => { e.stopPropagation(); this.projectMenu(e.currentTarget, d, space); }, { class: 'ibtn more' }) : null));
+    card.append(h('div', { class: 'row', style: 'justify-content:space-between;gap:.3rem' }, h('span', { class: 'label', text: k.label + (space === 'team' ? ' · compartido' : '') + (P.folder && !(this.prefs.homeFolder) ? ' · ' + P.folder : '') }), RT.canWrite ? ibtn('more', 'Opciones de «' + P.title + '»', (e) => { e.stopPropagation(); this.projectMenu(e.currentTarget, d, space); }, { class: 'ibtn more' }) : null));
     card.append(h('h3', { text: P.title }));
     if (st.peek) card.append(h('p', { class: 'peek', text: st.peek }));
     if (P.goal) {
@@ -2026,6 +2064,8 @@ const App = {
       else { items.push({ label: 'Hacer una copia privada', onClick: () => this.moveProject(d.id, 'mine', true) }); items.push({ label: 'Mover a mis proyectos', onClick: () => this.moveProject(d.id, 'mine') }); }
     }
     items.push({ label: 'Duplicar', onClick: () => this.moveProject(d.id, space, true) });
+    items.push({ sep: true }, { label: 'Carpeta' + (d.data.folder ? ': ' + d.data.folder : '') + '…', onClick: () => setTimeout(() => Collections.folderMenu(a, d), 30) });
+    items.push({ label: 'Juntar con otros proyectos…', onClick: () => Collections.joinDialog([d.id]) });
     items.push({ sep: true }, { label: 'Mover a la papelera', danger: true, onClick: () => { d.update(x => { x.trashed = true; }, { now: true }); this.renderHomeSoon(); this.toast('Proyecto en la papelera.', { action: { label: 'Deshacer', fn: () => { d.update(x => { x.trashed = false; }, { now: true }); this.renderHomeSoon(); } } }); } });
     UI.menu(a, items);
   },
@@ -2269,12 +2309,26 @@ const App = {
     if (RT.canWrite) hd.append(ibtn('plus', 'Agregar ' + k.unit.toLowerCase() + ' o sección', (e) => Pages.addMenu(e.currentTarget)));
     sec.append(hd);
     const list = h('div', { class: 'chlist' });
+    let curPart = null;
     (P.chapters || []).forEach((c, i) => {
+      if (c.role === 'parte') {
+        curPart = c;
+        const kids = Collections.children(c.id), col = Collections.collapsed(c.id);
+        const words = kids.reduce((n, z) => { const dz = this.ch(z.id); return n + (dz && dz.data ? chapterWords(dz.data) : 0); }, 0);
+        const it = h('div', { class: 'chi part' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (col ? ' col' : '') });
+        it.append(h('button', { type: 'button', class: 'tog', 'aria-expanded': col ? 'false' : 'true', 'aria-label': (col ? 'Mostrar' : 'Ocultar') + ' ' + (c.title || 'parte'), onclick: () => Collections.toggleCollapse(c.id) }, col ? '▸' : '▾'),
+          h('button', { class: 'go', type: 'button', onclick: () => { this.go(this.chHash(c.id)); this.toggleSide(false); } }, h('span', { class: 't', text: c.title || Collections.partLabel(c) }), h('span', { class: 'w', text: kids.length + (words ? ' · ' + (words >= 1000 ? (words / 1000).toFixed(1).replace('.', ',') + 'k' : words) : '') })));
+        if (RT.canWrite) it.append(ibtn('more', 'Opciones de ' + (c.title || 'la parte'), (e) => this.chapterMenu(e.currentTarget, c.id), { class: 'ibtn more' }));
+        list.append(it);
+        return;
+      }
+      if (curPart && Pages.role(c) && !SPECIAL[c.role].front) curPart = null;
+      if (curPart && Collections.collapsed(curPart.id)) return;
       const d = this.ch(c.id);
       const w = d && d.data ? chapterWords(d.data) : null;
       const open = d && d.data ? allMarks(d.data).filter(x => !x.m.done && x.m.type !== 'bien').length : 0;
       const role = Pages.role(c), num = role ? null : Pages.number(c.id);
-      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (role ? ' special' : '') });
+      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (role ? ' special' : '') + (curPart ? ' in-part' : '') });
       const go = h('button', { class: 'go', type: 'button', onclick: () => { this.go(this.chHash(c.id)); this.toggleSide(false); } },
         h('span', { class: 'n', text: role ? '§' : String(num).padStart(2, '0'), title: role ? SPECIAL[role].l : '' }), h('span', { class: 't', text: c.title || (role ? SPECIAL[role].l : k.unit + ' ' + num) }),
         w != null ? h('span', { class: 'w', text: w >= 1000 ? (w / 1000).toFixed(1).replace('.', ',') + 'k' : String(w) }) : null);
@@ -2363,7 +2417,10 @@ const App = {
       { label: 'Subir', disabled: i === 0, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j > 0) a.splice(j - 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Bajar', disabled: i === list.length - 1, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j >= 0 && j < a.length - 1) a.splice(j + 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Agregar después', onClick: () => this.addChapter(cid) },
-      { label: 'Tipo: ' + (Pages.role(list[i]) ? SPECIAL[list[i].role].l : 'normal (numerado)') + '…', onClick: () => setTimeout(() => Pages.roleMenu(anchor, cid), 30) },
+      list[i].role !== 'parte' ? { label: 'Mover a una parte…', onClick: () => setTimeout(() => Collections.partMenu(anchor, cid), 30) } : null,
+      list[i].role !== 'parte' ? { label: 'Mover a otro proyecto…', onClick: () => Collections.chapterTo(cid, true) } : null,
+      list[i].role !== 'parte' ? { label: 'Copiar a otro proyecto…', onClick: () => Collections.chapterTo(cid, false) } : null,
+      list[i].role !== 'parte' ? { label: 'Tipo: ' + (Pages.role(list[i]) ? SPECIAL[list[i].role].l : 'normal (numerado)') + '…', onClick: () => setTimeout(() => Pages.roleMenu(anchor, cid), 30) } : null,
       { label: 'Duplicar', onClick: () => this.duplicateChapter(cid) },
       { sep: true },
       { label: 'Historial de versiones', onClick: () => { this.go(this.chHash(cid)); setTimeout(() => Versions.open(cid), 80); } },
@@ -2600,7 +2657,8 @@ const Editor = {
     if (!this.root) return;
     const P = App.P(), k = kindOf(P);
     const c = App.chapterList().find(x => x.id === this.cid);
-    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
+    const part = c && c.role !== 'parte' ? Collections.partOf(this.cid) : null;
+    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : (c && c.role === 'parte') ? Collections.partLabel(c) + ' · ' + plural(Collections.children(c.id).length, k.unit.toLowerCase(), k.units.toLowerCase()) : (part ? Collections.partLabel(part) + ' · ' : '') + k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
     if (this.navEl) { const nn = Pages.navEl(); this.navEl.replaceWith(nn); this.navEl = nn; }
     if (document.activeElement !== this.titleEl) this.titleEl.value = App.chTitle(this.cid);
     const pstyle = (P.style && P.style.paragraph) || 'sangria';
@@ -4697,8 +4755,9 @@ const IO = {
   toMarkdown(P, chs, notes, one) {
     const out = []; let n = 0; const foot = [];
     if (!one) out.push('# ' + P.title, '');
+    const parts = chs.some(c => c.role === 'parte');
     chs.forEach(c => {
-      out.push((one ? '# ' : '## ') + c.title, '');
+      out.push((one ? '# ' : c.role === 'parte' || !parts ? '## ' : '### ') + c.title, '');
       c.paras.forEach(p => {
         let s = '';
         p.segs.forEach(g => { if (g.t != null) s += g.t; else { s += g.m.text; if (notes) { n++; s += '[^' + n + ']'; foot.push('[^' + n + ']: ' + this.noteLabel(g.m).replace(/\n/g, ' ')); } } });
@@ -4712,8 +4771,10 @@ const IO = {
     const pst = (P.style && P.style.paragraph) || 'sangria';
     let body = one ? '' : '<h1>' + hesc(P.title) + '</h1>\n';
     let n = 0;
+    const parts = chs.some(c => c.role === 'parte');
     chs.forEach(c => {
-      body += (one ? '<h1>' : '<h2>') + hesc(c.title) + (one ? '</h1>' : '</h2>') + '\n';
+      const tag = one ? 'h1' : (c.role === 'parte' || !parts ? 'h2' : 'h3');
+      body += '<' + tag + (c.role === 'parte' ? ' class="parte"' : '') + '>' + hesc(c.title) + '</' + tag + '>\n';
       c.paras.forEach(p => {
         if (!parText(p).trim()) return;
         let s = '', asides = '';
@@ -4725,7 +4786,7 @@ const IO = {
         body += (p.pb ? '<p style="break-before:page;text-indent:0">' : '<p>') + s + '</p>' + asides + '\n';
       });
     });
-    return '<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + hesc(one ? chs[0].title : P.title) + '</title><style>body{max-width:42rem;margin:3rem auto;padding:0 1.2rem;font:1.1875rem/1.75 Georgia,"Times New Roman",serif;color:#2a221b;background:#fbf7ef}h1,h2{font-weight:400;text-align:center}h1{font-size:2.4rem;margin:2rem 0 3rem}h2{font-size:1.8rem;margin:4rem 0 2rem}p{margin:0}' + (pst === 'sangria' ? 'p+p{text-indent:1.6em}' : 'p+p{margin-top:.9em}') + 'mark{background:#f2dd9c}sup{font:600 .6em system-ui;color:#8a5c16}aside{font:.875rem/1.5 system-ui,sans-serif;color:#6b5e4e;border-left:3px solid #e2dacd;padding-left:.8rem;margin:.4rem 0 .8rem;text-indent:0}@media (prefers-color-scheme:dark){body{background:#171411;color:#eee6d8}mark{background:#5a4520;color:inherit}aside{color:#b5a893;border-color:#3a332c}}</style></head><body>\n' + body + '</body></html>\n';
+    return '<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + hesc(one ? chs[0].title : P.title) + '</title><style>body{max-width:42rem;margin:3rem auto;padding:0 1.2rem;font:1.1875rem/1.75 Georgia,"Times New Roman",serif;color:#2a221b;background:#fbf7ef}h1,h2,h3{font-weight:400;text-align:center}h3{font-size:1.45rem;margin:3rem 0 1.5rem}h2.parte{font-size:2.1rem;margin:6rem 0 3rem;letter-spacing:.04em;break-before:page}h1{font-size:2.4rem;margin:2rem 0 3rem}h2{font-size:1.8rem;margin:4rem 0 2rem}p{margin:0}' + (pst === 'sangria' ? 'p+p{text-indent:1.6em}' : 'p+p{margin-top:.9em}') + 'mark{background:#f2dd9c}sup{font:600 .6em system-ui;color:#8a5c16}aside{font:.875rem/1.5 system-ui,sans-serif;color:#6b5e4e;border-left:3px solid #e2dacd;padding-left:.8rem;margin:.4rem 0 .8rem;text-indent:0}@media (prefers-color-scheme:dark){body{background:#171411;color:#eee6d8}mark{background:#5a4520;color:inherit}aside{color:#b5a893;border-color:#3a332c}}</style></head><body>\n' + body + '</body></html>\n';
   },
   async toDocx(P, chs, notes, one) {
     await loadScript('jszip');
@@ -6607,12 +6668,13 @@ const Pages = {
   role(c) { return c && c.role && SPECIAL[c.role] ? c.role : null; },
   number(cid) {
     let n = 0, out = null;
-    App.chapterList().forEach(c => { if (!this.role(c)) { n++; if (c.id === cid) out = n; } });
+    App.chapterList().forEach(c => { if (!this.role(c) && c.role !== 'parte') { n++; if (c.id === cid) out = n; } });
     return out;
   },
-  regularCount() { return App.chapterList().filter(c => !this.role(c)).length; },
+  regularCount() { return App.chapterList().filter(c => !this.role(c) && c.role !== 'parte').length; },
   label(c) {
     const r = this.role(c); if (r) return SPECIAL[r].l;
+    if (c.role === 'parte') return Collections.partLabel(c);
     return App.unit() + ' ' + this.number(c.id);
   },
   /* Lugar donde va una sección especial: delante (antes del primer capítulo) o al final. */
@@ -6637,6 +6699,7 @@ const Pages = {
     const front = Object.keys(SPECIAL).filter(r => SPECIAL[r].front), back = Object.keys(SPECIAL).filter(r => !SPECIAL[r].front);
     UI.menu(anchor, [
       { label: 'Nuevo ' + k.unit.toLowerCase(), onClick: () => App.addChapter() },
+      { label: 'Nueva parte (agrupa ' + k.units.toLowerCase() + ')', onClick: () => Collections.addPart() },
       { sep: true }, { header: 'Al comienzo' }
     ].concat(front.map(r => ({ label: SPECIAL[r].l, onClick: () => this.addSpecial(r) })), [{ sep: true }, { header: 'Al final' }], back.map(r => ({ label: SPECIAL[r].l, onClick: () => this.addSpecial(r) }))));
   },
@@ -6667,7 +6730,7 @@ const Pages = {
   palette() {
     if (App.view !== 'project') return;
     const items = [];
-    App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : '', fn: () => App.go(App.chHash(c.id)) }));
+    App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) || c.role === 'parte' ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : c.role === 'parte' ? Collections.partLabel(c) : '', fn: () => App.go(App.chHash(c.id)) }));
     if (App.tab === 'escribir' && this.pages.length > 1) this.pages.forEach((pg, i) => items.push({ g: 'Páginas de este ' + App.unit().toLowerCase(), t: 'Página ' + (i + 1), s: pg.peek, fn: () => this.goPage(i + 1) }));
     [['Biblia', '-biblia'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
     const inp = h('input', { class: 'inp', placeholder: 'Escribe para filtrar: capítulo, página, «biblia»…', 'aria-label': 'Ir a' });
@@ -6883,6 +6946,275 @@ const Dialogo = {
   }
 };
 window.Dialogo = Dialogo;
+
+/* ============ partes, carpetas y juntar proyectos ============
+   - Partes: separadores dentro de un proyecto que agrupan capítulos o poemas (como carpetas).
+   - Carpetas: ordenan los proyectos en el inicio.
+   - Juntar: une varios proyectos (por ejemplo, poemas sueltos) en un libro, o mueve y copia capítulos entre proyectos. */
+const ROMAN = (n) => { const r = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]; let s = ''; r.forEach(([v, l]) => { while (n >= v) { s += l; n -= v; } }); return s; };
+
+const Collections = {
+  /* ---------- partes dentro de un proyecto ---------- */
+  isPart(c) { return !!(c && c.role === 'parte'); },
+  partNumber(cid) { let n = 0, out = null; App.chapterList().forEach(c => { if (this.isPart(c)) { n++; if (c.id === cid) out = n; } }); return out; },
+  partLabel(c) { return 'Parte ' + ROMAN(this.partNumber(c.id) || 1); },
+  /* Capítulos de cada parte: desde la parte hasta la siguiente parte o las secciones finales. */
+  partOf(cid) {
+    let cur = null;
+    for (const c of App.chapterList()) {
+      if (this.isPart(c)) cur = c;
+      else if (Pages.role(c) && !SPECIAL[c.role].front) cur = null;
+      if (c.id === cid) return this.isPart(c) ? null : cur;
+    }
+    return null;
+  },
+  children(pid) {
+    const list = App.chapterList(); const i = list.findIndex(c => c.id === pid); const out = [];
+    for (let j = i + 1; j < list.length; j++) { const c = list[j]; if (this.isPart(c) || (Pages.role(c) && !SPECIAL[c.role].front)) break; out.push(c); }
+    return out;
+  },
+  addPart(afterCid) {
+    const pd = App.proj(); if (!pd) return;
+    const cid = uid('c');
+    App.chapters.create(cid, { paras: [{ id: uid('p'), segs: [] }] });
+    pd.update(x => {
+      const n = x.chapters.filter(c => c.role === 'parte').length + 1;
+      let i;
+      if (afterCid) { i = x.chapters.findIndex(c => c.id === afterCid) + 1; }
+      else { i = x.chapters.length; while (i > 0 && x.chapters[i - 1].role && SPECIAL[x.chapters[i - 1].role] && !SPECIAL[x.chapters[i - 1].role].front) i--; }
+      x.chapters.splice(i, 0, { id: cid, title: 'Parte ' + ROMAN(n), role: 'parte' });
+    }, { now: true });
+    App.go(App.chHash(cid));
+    setTimeout(() => { const t = $('.ch-title'); if (t) { t.focus(); t.select(); } }, 120);
+  },
+  /* Mueve un capítulo al final de una parte (o fuera de toda parte). */
+  moveToPart(cid, partId) {
+    App.proj().update(x => {
+      const a = x.chapters; const i = a.findIndex(c => c.id === cid); if (i < 0) return;
+      const [c] = a.splice(i, 1);
+      let j;
+      if (partId) {
+        j = a.findIndex(z => z.id === partId) + 1;
+        while (j < a.length && a[j].role !== 'parte' && !(a[j].role && SPECIAL[a[j].role] && !SPECIAL[a[j].role].front)) j++;
+      } else {
+        // fuera de las partes: antes de la primera parte
+        j = a.findIndex(z => z.role === 'parte'); if (j < 0) j = a.length;
+      }
+      a.splice(j, 0, c);
+    }, { now: true });
+  },
+  partMenu(anchor, cid) {
+    const parts = App.chapterList().filter(c => this.isPart(c));
+    const cur = this.partOf(cid);
+    UI.menu(anchor, [{ label: 'Sin parte (al comienzo)', checked: !cur, onClick: () => this.moveToPart(cid, null) }, { sep: true }]
+      .concat(parts.map(p => ({ label: this.partLabel(p) + (p.title && p.title !== this.partLabel(p) ? ': ' + p.title : ''), checked: cur && cur.id === p.id, onClick: () => this.moveToPart(cid, p.id) })))
+      .concat([{ sep: true }, { label: 'Nueva parte…', onClick: () => this.addPart() }]));
+  },
+  toggleCollapse(pid) {
+    App.prefs.collapsed = App.prefs.collapsed || {};
+    if (App.prefs.collapsed[pid]) delete App.prefs.collapsed[pid]; else App.prefs.collapsed[pid] = true;
+    App.savePrefs(); App.renderSide();
+  },
+  collapsed(pid) { return !!(App.prefs.collapsed && App.prefs.collapsed[pid]); },
+
+  /* ---------- carpetas en el inicio ---------- */
+  folders() {
+    const set = new Set((App.prefs.folders || []).filter(Boolean));
+    App.allProjects().forEach(x => { if (!x.doc.data.trashed && x.doc.data.folder) set.add(x.doc.data.folder); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  },
+  setFolder(d, name) {
+    d.update(x => { if (name) x.folder = name; else delete x.folder; }, { now: true });
+    if (name) { const f = App.prefs.folders || []; if (!f.includes(name)) { f.push(name); App.prefs.folders = f; App.savePrefs(); } }
+    App.renderHomeSoon();
+  },
+  async newFolder(d) {
+    const name = await UI.prompt('Nueva carpeta', 'Nombre de la carpeta', ''); if (!name || !name.trim()) return;
+    const n = name.trim();
+    const f = App.prefs.folders || []; if (!f.includes(n)) { f.push(n); App.prefs.folders = f; App.savePrefs(); }
+    if (d) this.setFolder(d, n); else { App.prefs.homeFolder = n; App.savePrefs(); App.renderHomeSoon(); }
+  },
+  folderMenu(anchor, d) {
+    const cur = d.data.folder || null;
+    UI.menu(anchor, [{ label: 'Sin carpeta', checked: !cur, onClick: () => this.setFolder(d, null) }, { sep: true }]
+      .concat(this.folders().map(f => ({ label: f, checked: cur === f, onClick: () => this.setFolder(d, f) })))
+      .concat([{ sep: true }, { label: 'Nueva carpeta…', onClick: () => this.newFolder(d) }]));
+  },
+  async renameFolder(old) {
+    const name = await UI.prompt('Renombrar carpeta', 'Nombre', old); if (!name || !name.trim() || name.trim() === old) return;
+    const n = name.trim();
+    App.allProjects().forEach(x => { if (x.doc.data.folder === old) x.doc.update(z => { z.folder = n; }, { now: true }); });
+    App.prefs.folders = (App.prefs.folders || []).map(f => f === old ? n : f); if (App.prefs.homeFolder === old) App.prefs.homeFolder = n; App.savePrefs();
+    App.renderHomeSoon();
+  },
+  async deleteFolder(name) {
+    if (!await UI.confirm('Quitar carpeta', 'Los proyectos de «' + name + '» quedarán sin carpeta. No se borra ningún texto.', 'Quitar carpeta')) return;
+    App.allProjects().forEach(x => { if (x.doc.data.folder === name) x.doc.update(z => { delete z.folder; }, { now: true }); });
+    App.prefs.folders = (App.prefs.folders || []).filter(f => f !== name); if (App.prefs.homeFolder === name) App.prefs.homeFolder = null; App.savePrefs();
+    App.renderHomeSoon();
+  },
+  /* Barra de carpetas del inicio. */
+  folderBar(list) {
+    const fs = this.folders();
+    if (!fs.length && !RT.canWrite) return null;
+    const cur = App.prefs.homeFolder && fs.includes(App.prefs.homeFolder) ? App.prefs.homeFolder : null;
+    const bar = h('div', { class: 'fbar', role: 'tablist', 'aria-label': 'Carpetas' });
+    const chip = (label, val, n) => h('button', { type: 'button', role: 'tab', class: 'fchip' + (cur === val ? ' on' : ''), 'aria-selected': cur === val ? 'true' : 'false', onclick: () => { App.prefs.homeFolder = val; App.savePrefs(); App.renderHomeSoon(); } }, icon(val ? 'folder' : 'grid'), h('span', { text: label }), h('b', { text: String(n) }));
+    bar.append(chip('Todos', null, list.length));
+    fs.forEach(f => bar.append(chip(f, f, list.filter(x => x.doc.data.folder === f).length)));
+    if (RT.canWrite) bar.append(h('button', { type: 'button', class: 'fchip add', onclick: () => this.newFolder(null) }, icon('plus'), h('span', { text: 'Carpeta' })));
+    if (cur && RT.canWrite) {
+      bar.append(h('span', { class: 'spacer' }));
+      const inF = list.filter(x => x.doc.data.folder === cur);
+      if (inF.length >= 2) bar.append(btn([icon('book'), 'Juntar en un libro'], () => this.joinDialog(inF.map(x => x.doc.id)), 'small'));
+      bar.append(ibtn('more', 'Opciones de la carpeta', (e) => UI.menu(e.currentTarget, [{ label: 'Renombrar carpeta', onClick: () => this.renameFolder(cur) }, { label: 'Quitar carpeta', danger: true, onClick: () => this.deleteFolder(cur) }])));
+    }
+    return { bar: bar, cur: cur };
+  },
+
+  /* ---------- copiar capítulos entre proyectos ---------- */
+  strip(data) { const o = {}; Object.keys(data || {}).forEach(k => { if (k[0] !== '_') o[k] = data[k]; }); return o; },
+  async readChapters(pid) {
+    Store.flushAll && Store.flushAll();
+    const f = App.findProj(pid); if (!f) return [];
+    const base = App.spacePath(f.space) + '/' + pid;
+    const out = [];
+    for (const c of (f.doc.data.chapters || [])) {
+      let data = null;
+      if (App.pid === pid && App.ch(c.id) && App.ch(c.id).data) data = clone(App.ch(c.id).data);
+      else { try { const s = await RT.db.doc(base + '/chapters/' + c.id).get(); data = s.exists === false ? null : (typeof s.data === 'function' ? s.data() : s.data); } catch (e) { data = null; } }
+      out.push({ meta: c, data: this.strip(data || { paras: [] }) });
+    }
+    return out;
+  },
+  async writeChapter(space, pid, cid, data) {
+    const d = this.strip(data); delete d.report; delete d.dismiss;
+    d.paras = d.paras && d.paras.length ? d.paras : [{ id: uid('p'), segs: [] }];
+    d._v = uid('v');
+    await RT.db.doc(App.spacePath(space) + '/' + pid + '/chapters/' + cid).set(d);
+  },
+  /* Inserta entradas de capítulos en otro proyecto, antes de sus secciones finales. */
+  appendEntries(x, entries) {
+    let i = x.chapters.length; while (i > 0 && x.chapters[i - 1].role && SPECIAL[x.chapters[i - 1].role] && !SPECIAL[x.chapters[i - 1].role].front) i--;
+    x.chapters.splice(i, 0, ...entries);
+  },
+  projectPicker(exclude, onPick, title, allowNew) {
+    const list = App.allProjects().filter(x => !x.doc.data.trashed && x.doc.id !== exclude);
+    const sel = h('select', { class: 'sel', 'aria-label': 'Proyecto' });
+    if (allowNew) sel.append(h('option', { value: '__new', text: 'Un proyecto nuevo…' }));
+    list.forEach(x => sel.append(h('option', { value: x.doc.id, text: x.doc.data.title + (x.doc.data.folder ? ' · ' + x.doc.data.folder : '') })));
+    UI.modal({ title: title, body: h('label', { class: 'field' }, h('span', { text: 'Proyecto' }), sel), buttons: [{ label: 'Cancelar' }, { label: 'Listo', cls: 'primary', onClick: () => { onPick(sel.value); } }] });
+  },
+  chapterTo(cid, move) {
+    const title = (move ? 'Mover' : 'Copiar') + ' «' + (App.chTitle(cid) || App.unit()) + '» a…';
+    this.projectPicker(App.pid, async (target) => {
+      let tpid = target;
+      if (target === '__new') {
+        const t = await UI.prompt('Proyecto nuevo', 'Título', App.chTitle(cid) || 'Sin título'); if (t == null) return;
+        tpid = await this.createEmpty(t, App.P().kind, App.findProj(App.pid).space);
+      }
+      const f = App.findProj(tpid); if (!f) return;
+      const d = App.ch(cid); if (!d || !d.data) return;
+      Store.flushAll && Store.flushAll();
+      const ncid = uid('c'); const meta = App.chapterList().find(c => c.id === cid);
+      await this.writeChapter(f.space, tpid, ncid, clone(d.data));
+      f.doc.update(x => { this.appendEntries(x, [{ id: ncid, title: meta.title || '', role: meta.role && meta.role !== 'parte' ? meta.role : undefined }]); x.stats = x.stats || {}; }, { now: true });
+      if (move && App.chapterList().length > 1) App.trashChapter(cid);
+      App.toast((move ? 'Movido' : 'Copiado') + ' a «' + f.doc.data.title + '».', { action: { label: 'Abrir', fn: () => App.go('p-' + tpid + '-c-' + ncid) } });
+    }, title, true);
+  },
+  async createEmpty(title, kind, space) {
+    space = space && App.colls[space] ? space : (App.colls.mine ? 'mine' : 'team');
+    const np = newProjectData(title, kind || 'otro', 0);
+    const pid = uid('p');
+    np.data.createdBy = RT.me || null; np.data.chapters = [];
+    np.data.stats = { words: 0, chapters: 0, peek: '' };
+    App.colls[space].create(pid, np.data);
+    await new Promise(r => setTimeout(r, 30));
+    return pid;
+  },
+
+  /* ---------- juntar proyectos en uno ---------- */
+  joinDialog(preselect) {
+    const all = App.allProjects().filter(x => !x.doc.data.trashed);
+    const pre = new Set(preselect || []);
+    const box = h('div', { class: 'join' });
+    const checks = h('div', { class: 'join-list' });
+    const order = all.slice().sort((a, b) => (pre.has(b.doc.id) - pre.has(a.doc.id)) || (a.doc.data.title || '').localeCompare(b.doc.data.title || '', 'es'));
+    order.forEach(x => {
+      const c = h('input', { type: 'checkbox', value: x.doc.id, checked: pre.has(x.doc.id) });
+      const P = x.doc.data;
+      checks.append(h('label', { class: 'join-it' }, c, h('span', { class: 't', text: P.title || 'Sin título' }), h('span', { class: 's', text: kindOf(P).label + ' · ' + plural((P.chapters || []).length, kindOf(P).unit.toLowerCase(), kindOf(P).units.toLowerCase()) + (P.folder ? ' · ' + P.folder : '') })));
+    });
+    const firstKind = (all.find(x => pre.has(x.doc.id)) || all[0] || { doc: { data: {} } }).doc.data.kind || 'poesia';
+    const title = h('input', { class: 'inp', value: preselect && preselect.length && App.prefs.homeFolder ? App.prefs.homeFolder : '', placeholder: 'Por ejemplo: Poemario del puerto' });
+    const kind = h('select', { class: 'sel' }); Object.keys(KINDS).forEach(k => kind.append(h('option', { value: k, text: KINDS[k].label }))); kind.value = firstKind;
+    const target = h('select', { class: 'sel' }, h('option', { value: '__new', text: 'Un proyecto nuevo' }), ...all.map(x => h('option', { value: x.doc.id, text: 'Agregar a «' + x.doc.data.title + '»' })));
+    const asParts = h('input', { type: 'checkbox' });
+    const trash = h('input', { type: 'checkbox' });
+    const sync = () => { const isNew = target.value === '__new'; title.disabled = !isNew; kind.disabled = !isNew; };
+    target.addEventListener('change', sync); sync();
+    const picked = () => Array.from(checks.querySelectorAll('input:checked')).map(i => i.value);
+    const updParts = () => { const ids = picked(); asParts.checked = ids.some(id => ((App.findProj(id) || { doc: { data: {} } }).doc.data.chapters || []).length > 1); };
+    checks.addEventListener('change', updParts); updParts();
+    box.append(
+      h('p', { class: 'muted', style: 'margin:0', text: 'Elige los proyectos que quieres reunir, en el orden en que aparecen. Se copian sus textos, notas y fichas de la biblia; los originales no se tocan, salvo que lo pidas.' }),
+      checks,
+      h('label', { class: 'field' }, h('span', { text: 'Juntar en' }), target),
+      h('div', { class: 'row', style: 'gap:.8rem;align-items:flex-end' }, h('label', { class: 'field', style: 'flex:2' }, h('span', { text: 'Título del libro' }), title), h('label', { class: 'field', style: 'flex:1' }, h('span', { text: 'Tipo' }), kind)),
+      h('label', { class: 'row', style: 'gap:.45rem;font-size:.875rem' }, asParts, 'Cada proyecto como una parte (Parte I, II…)'),
+      h('label', { class: 'row', style: 'gap:.45rem;font-size:.875rem' }, trash, 'Después, mover los originales a la papelera'));
+    UI.modal({ title: 'Juntar proyectos', body: box, buttons: [{ label: 'Cancelar' }, { label: 'Juntar', cls: 'primary', onClick: () => {
+      const ids = order.map(x => x.doc.id).filter(id => picked().includes(id));
+      if (!ids.length) { App.toast('Elige al menos un proyecto.'); return false; }
+      this.join(ids, { target: target.value, title: title.value.trim() || 'Libro sin título', kind: kind.value, asParts: asParts.checked, trash: trash.checked });
+    } }] });
+  },
+  async join(ids, o) {
+    App.toast('Juntando ' + plural(ids.length, 'proyecto') + '…');
+    let tpid = o.target, f;
+    if (tpid === '__new') { tpid = await this.createEmpty(o.title, o.kind); }
+    f = App.findProj(tpid); if (!f) { App.toast('No se encontró el proyecto de destino.'); return; }
+    const entries = [], bibles = [], dict = new Set(), threads = [];
+    for (const sid of ids) {
+      if (sid === tpid) continue;
+      const src = App.findProj(sid); if (!src) continue;
+      const P = src.doc.data;
+      const chs = await this.readChapters(sid);
+      if (o.asParts) { const pc = uid('c'); await this.writeChapter(f.space, tpid, pc, { paras: [{ id: uid('p'), segs: [] }] }); entries.push({ id: pc, title: P.title || 'Parte', role: 'parte' }); }
+      for (const c of chs) {
+        if (o.asParts && c.meta.role === 'parte') continue;
+        const ncid = uid('c');
+        await this.writeChapter(f.space, tpid, ncid, c.data);
+        // un proyecto de un solo texto con título genérico toma el título del proyecto (útil para poemas sueltos)
+        let t = c.meta.title || '';
+        if (chs.length === 1 && (!t || /^(Capítulo|Parte|Sección|Escena|Poema)\s+\d+$/.test(t))) t = P.title || t;
+        const e = { id: ncid, title: t }; if (c.meta.role && c.meta.role !== 'parte') e.role = c.meta.role; else if (c.meta.role === 'parte') e.role = 'parte';
+        entries.push(e);
+      }
+      ((P.bible && P.bible.sections) || []).forEach(s => bibles.push(s));
+      (P.dictionary || []).forEach(w => dict.add(w));
+      (P.threads || []).forEach(t => threads.push(Object.assign({}, t, { id: uid('t') })));
+    }
+    f.doc.update(x => {
+      this.appendEntries(x, entries);
+      x.bible = x.bible || { sections: [] };
+      bibles.forEach(s => {
+        let t = x.bible.sections.find(z => (z.label || '').toLowerCase() === (s.label || '').toLowerCase());
+        if (!t) { t = { id: uid('s'), label: s.label, fields: (s.fields || []).slice(), graph: !!s.graph, items: [] }; x.bible.sections.push(t); }
+        (s.fields || []).forEach(fl => { if (!(t.fields || []).includes(fl)) (t.fields = t.fields || []).push(fl); });
+        (s.items || []).forEach(it => { if (!(t.items || []).some(z => (z.title || '').trim().toLowerCase() === (it.title || '').trim().toLowerCase() && it.title)) (t.items = t.items || []).push(Object.assign(clone(it), { id: uid('i') })); });
+      });
+      if (dict.size) x.dictionary = Array.from(new Set((x.dictionary || []).concat(Array.from(dict))));
+      if (threads.length) x.threads = (x.threads || []).concat(threads);
+    }, { now: true });
+    if (o.trash) ids.forEach(id => { if (id === tpid) return; const s = App.findProj(id); if (s) s.doc.update(z => { z.trashed = true; }, { now: true }); });
+    App.toast('Listo: «' + f.doc.data.title + '» tiene ahora ' + plural((f.doc.data.chapters || []).length, kindOf(f.doc.data).unit.toLowerCase(), kindOf(f.doc.data).units.toLowerCase()) + '.');
+    App.go('p-' + tpid);
+    return tpid;
+  }
+};
+window.Collections = Collections;
 
 /* utilidades visibles para depurar desde la consola */
 window.MDE = { allMarks: allMarks, findMark: findMark, parText: parText, RT: RT, Store: Store };

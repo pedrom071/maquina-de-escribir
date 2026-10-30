@@ -20,12 +20,13 @@ const Pages = {
   role(c) { return c && c.role && SPECIAL[c.role] ? c.role : null; },
   number(cid) {
     let n = 0, out = null;
-    App.chapterList().forEach(c => { if (!this.role(c)) { n++; if (c.id === cid) out = n; } });
+    App.chapterList().forEach(c => { if (!this.role(c) && c.role !== 'parte') { n++; if (c.id === cid) out = n; } });
     return out;
   },
-  regularCount() { return App.chapterList().filter(c => !this.role(c)).length; },
+  regularCount() { return App.chapterList().filter(c => !this.role(c) && c.role !== 'parte').length; },
   label(c) {
     const r = this.role(c); if (r) return SPECIAL[r].l;
+    if (c.role === 'parte') return Collections.partLabel(c);
     return App.unit() + ' ' + this.number(c.id);
   },
   /* Lugar donde va una sección especial: delante (antes del primer capítulo) o al final. */
@@ -50,6 +51,7 @@ const Pages = {
     const front = Object.keys(SPECIAL).filter(r => SPECIAL[r].front), back = Object.keys(SPECIAL).filter(r => !SPECIAL[r].front);
     UI.menu(anchor, [
       { label: 'Nuevo ' + k.unit.toLowerCase(), onClick: () => App.addChapter() },
+      { label: 'Nueva parte (agrupa ' + k.units.toLowerCase() + ')', onClick: () => Collections.addPart() },
       { sep: true }, { header: 'Al comienzo' }
     ].concat(front.map(r => ({ label: SPECIAL[r].l, onClick: () => this.addSpecial(r) })), [{ sep: true }, { header: 'Al final' }], back.map(r => ({ label: SPECIAL[r].l, onClick: () => this.addSpecial(r) }))));
   },
@@ -80,7 +82,7 @@ const Pages = {
   palette() {
     if (App.view !== 'project') return;
     const items = [];
-    App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : '', fn: () => App.go(App.chHash(c.id)) }));
+    App.chapterList().forEach(c => items.push({ g: kindOf(App.P()).units, t: (this.role(c) || c.role === 'parte' ? '' : this.number(c.id) + '. ') + (c.title || this.label(c)), s: this.role(c) ? SPECIAL[c.role].l : c.role === 'parte' ? Collections.partLabel(c) : '', fn: () => App.go(App.chHash(c.id)) }));
     if (App.tab === 'escribir' && this.pages.length > 1) this.pages.forEach((pg, i) => items.push({ g: 'Páginas de este ' + App.unit().toLowerCase(), t: 'Página ' + (i + 1), s: pg.peek, fn: () => this.goPage(i + 1) }));
     [['Biblia', '-biblia'], ['Diagramas', '-diagramas'], ['Estadísticas', '-estadisticas'], ['Ajustes', '-ajustes']].forEach(([t, s]) => items.push({ g: 'Proyecto', t: t, s: '', fn: () => App.go('p-' + App.pid + s) }));
     const inp = h('input', { class: 'inp', placeholder: 'Escribe para filtrar: capítulo, página, «biblia»…', 'aria-label': 'Ir a' });

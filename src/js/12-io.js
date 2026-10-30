@@ -120,8 +120,9 @@ const IO = {
   toMarkdown(P, chs, notes, one) {
     const out = []; let n = 0; const foot = [];
     if (!one) out.push('# ' + P.title, '');
+    const parts = chs.some(c => c.role === 'parte');
     chs.forEach(c => {
-      out.push((one ? '# ' : '## ') + c.title, '');
+      out.push((one ? '# ' : c.role === 'parte' || !parts ? '## ' : '### ') + c.title, '');
       c.paras.forEach(p => {
         let s = '';
         p.segs.forEach(g => { if (g.t != null) s += g.t; else { s += g.m.text; if (notes) { n++; s += '[^' + n + ']'; foot.push('[^' + n + ']: ' + this.noteLabel(g.m).replace(/\n/g, ' ')); } } });
@@ -135,8 +136,10 @@ const IO = {
     const pst = (P.style && P.style.paragraph) || 'sangria';
     let body = one ? '' : '<h1>' + hesc(P.title) + '</h1>\n';
     let n = 0;
+    const parts = chs.some(c => c.role === 'parte');
     chs.forEach(c => {
-      body += (one ? '<h1>' : '<h2>') + hesc(c.title) + (one ? '</h1>' : '</h2>') + '\n';
+      const tag = one ? 'h1' : (c.role === 'parte' || !parts ? 'h2' : 'h3');
+      body += '<' + tag + (c.role === 'parte' ? ' class="parte"' : '') + '>' + hesc(c.title) + '</' + tag + '>\n';
       c.paras.forEach(p => {
         if (!parText(p).trim()) return;
         let s = '', asides = '';
@@ -148,7 +151,7 @@ const IO = {
         body += (p.pb ? '<p style="break-before:page;text-indent:0">' : '<p>') + s + '</p>' + asides + '\n';
       });
     });
-    return '<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + hesc(one ? chs[0].title : P.title) + '</title><style>body{max-width:42rem;margin:3rem auto;padding:0 1.2rem;font:1.1875rem/1.75 Georgia,"Times New Roman",serif;color:#2a221b;background:#fbf7ef}h1,h2{font-weight:400;text-align:center}h1{font-size:2.4rem;margin:2rem 0 3rem}h2{font-size:1.8rem;margin:4rem 0 2rem}p{margin:0}' + (pst === 'sangria' ? 'p+p{text-indent:1.6em}' : 'p+p{margin-top:.9em}') + 'mark{background:#f2dd9c}sup{font:600 .6em system-ui;color:#8a5c16}aside{font:.875rem/1.5 system-ui,sans-serif;color:#6b5e4e;border-left:3px solid #e2dacd;padding-left:.8rem;margin:.4rem 0 .8rem;text-indent:0}@media (prefers-color-scheme:dark){body{background:#171411;color:#eee6d8}mark{background:#5a4520;color:inherit}aside{color:#b5a893;border-color:#3a332c}}</style></head><body>\n' + body + '</body></html>\n';
+    return '<!doctype html>\n<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + hesc(one ? chs[0].title : P.title) + '</title><style>body{max-width:42rem;margin:3rem auto;padding:0 1.2rem;font:1.1875rem/1.75 Georgia,"Times New Roman",serif;color:#2a221b;background:#fbf7ef}h1,h2,h3{font-weight:400;text-align:center}h3{font-size:1.45rem;margin:3rem 0 1.5rem}h2.parte{font-size:2.1rem;margin:6rem 0 3rem;letter-spacing:.04em;break-before:page}h1{font-size:2.4rem;margin:2rem 0 3rem}h2{font-size:1.8rem;margin:4rem 0 2rem}p{margin:0}' + (pst === 'sangria' ? 'p+p{text-indent:1.6em}' : 'p+p{margin-top:.9em}') + 'mark{background:#f2dd9c}sup{font:600 .6em system-ui;color:#8a5c16}aside{font:.875rem/1.5 system-ui,sans-serif;color:#6b5e4e;border-left:3px solid #e2dacd;padding-left:.8rem;margin:.4rem 0 .8rem;text-indent:0}@media (prefers-color-scheme:dark){body{background:#171411;color:#eee6d8}mark{background:#5a4520;color:inherit}aside{color:#b5a893;border-color:#3a332c}}</style></head><body>\n' + body + '</body></html>\n';
   },
   async toDocx(P, chs, notes, one) {
     await loadScript('jszip');

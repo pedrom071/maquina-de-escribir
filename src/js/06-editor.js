@@ -92,7 +92,8 @@ const Editor = {
     if (!this.root) return;
     const P = App.P(), k = kindOf(P);
     const c = App.chapterList().find(x => x.id === this.cid);
-    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
+    const part = c && c.role !== 'parte' ? Collections.partOf(this.cid) : null;
+    const eb = $('#ch-eyebrow'); if (eb) eb.textContent = Pages.role(c) ? SPECIAL[c.role].l : (c && c.role === 'parte') ? Collections.partLabel(c) + ' · ' + plural(Collections.children(c.id).length, k.unit.toLowerCase(), k.units.toLowerCase()) : (part ? Collections.partLabel(part) + ' · ' : '') + k.unit + ' ' + Pages.number(this.cid) + ' de ' + Pages.regularCount();
     if (this.navEl) { const nn = Pages.navEl(); this.navEl.replaceWith(nn); this.navEl = nn; }
     if (document.activeElement !== this.titleEl) this.titleEl.value = App.chTitle(this.cid);
     const pstyle = (P.style && P.style.paragraph) || 'sangria';

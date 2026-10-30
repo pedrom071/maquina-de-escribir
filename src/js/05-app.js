@@ -170,8 +170,19 @@ const App = {
     if (!RT.canWrite && !RT.local) wrap.append(h('div', { class: 'panel onboard' }, h('h3', { text: 'Estás en modo lectura' }), h('p', { class: 'muted', style: 'margin:0', text: 'Puedes ver los proyectos compartidos, pero no escribir. Para tener tus propios proyectos aquí, pide a quien te compartió esta herramienta que te invite con permiso de edición.' })));
     const hasTeam = !!this.colls.team;
     wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: hasTeam ? 'Mis proyectos' : 'Proyectos' }), hasTeam ? h('span', { class: 'muted', text: 'Solo tú los ves.' }) : null));
+    const fb = Collections.folderBar(mine.concat(team));
+    if (fb) wrap.append(fb.bar);
+    const inFolder = (x) => !fb || !fb.cur || x.doc.data.folder === fb.cur;
     const grid = h('div', { class: 'pgrid' });
-    mine.forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
+    const mineShown = mine.filter(inFolder);
+    if (fb && !fb.cur && Collections.folders().length) {
+      // agrupados por carpeta
+      const groups = new Map(); mineShown.forEach(x => { const f = x.doc.data.folder || ''; if (!groups.has(f)) groups.set(f, []); groups.get(f).push(x); });
+      Array.from(groups.keys()).sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, 'es')).forEach(f => {
+        if (f) grid.append(h('button', { type: 'button', class: 'pgroup', onclick: () => { this.prefs.homeFolder = f; this.savePrefs(); this.renderHomeSoon(); } }, icon('folder'), h('span', { text: f }), h('b', { text: String(groups.get(f).length) })));
+        groups.get(f).forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
+      });
+    } else mineShown.forEach(x => grid.append(this.projectCard(x.doc, 'mine')));
     if (RT.canWrite && this.colls.mine) grid.append(h('button', { class: 'pcard new', type: 'button', onclick: () => this.newProject({ space: 'mine' }) }, icon('plus'), h('span', { text: 'Nuevo proyecto' })));
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
@@ -180,7 +191,7 @@ const App = {
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
       const tg = h('div', { class: 'pgrid' });
-      team.forEach(x => tg.append(this.projectCard(x.doc, 'team')));
+      team.filter(inFolder).forEach(x => tg.append(this.projectCard(x.doc, 'team')));
       if (RT.canWrite) tg.append(h('button', { class: 'pcard new', type: 'button', onclick: () => this.newProject({ space: 'team' }) }, icon('plus'), h('span', { text: 'Nuevo proyecto compartido' })));
       else if (!team.length) tg.append(h('div', { class: 'empty', text: 'No hay proyectos compartidos.' }));
       wrap.append(tg);
@@ -210,7 +221,7 @@ const App = {
   projectCard(d, space) {
     const P = d.data, k = kindOf(P), st = P.stats || {};
     const card = h('div', { class: 'pcard', role: 'link', tabindex: '0', onclick: (e) => { if (!e.target.closest('.more')) this.go('p-' + d.id); }, onkeydown: (e) => { if (e.key === 'Enter' && e.target === card) this.go('p-' + d.id); } });
-    card.append(h('div', { class: 'row', style: 'justify-content:space-between;gap:.3rem' }, h('span', { class: 'label', text: k.label + (space === 'team' ? ' · compartido' : '') }), RT.canWrite ? ibtn('more', 'Opciones de «' + P.title + '»', (e) => { e.stopPropagation(); this.projectMenu(e.currentTarget, d, space); }, { class: 'ibtn more' }) : null));
+    card.append(h('div', { class: 'row', style: 'justify-content:space-between;gap:.3rem' }, h('span', { class: 'label', text: k.label + (space === 'team' ? ' · compartido' : '') + (P.folder && !(this.prefs.homeFolder) ? ' · ' + P.folder : '') }), RT.canWrite ? ibtn('more', 'Opciones de «' + P.title + '»', (e) => { e.stopPropagation(); this.projectMenu(e.currentTarget, d, space); }, { class: 'ibtn more' }) : null));
     card.append(h('h3', { text: P.title }));
     if (st.peek) card.append(h('p', { class: 'peek', text: st.peek }));
     if (P.goal) {
@@ -230,6 +241,8 @@ const App = {
       else { items.push({ label: 'Hacer una copia privada', onClick: () => this.moveProject(d.id, 'mine', true) }); items.push({ label: 'Mover a mis proyectos', onClick: () => this.moveProject(d.id, 'mine') }); }
     }
     items.push({ label: 'Duplicar', onClick: () => this.moveProject(d.id, space, true) });
+    items.push({ sep: true }, { label: 'Carpeta' + (d.data.folder ? ': ' + d.data.folder : '') + '…', onClick: () => setTimeout(() => Collections.folderMenu(a, d), 30) });
+    items.push({ label: 'Juntar con otros proyectos…', onClick: () => Collections.joinDialog([d.id]) });
     items.push({ sep: true }, { label: 'Mover a la papelera', danger: true, onClick: () => { d.update(x => { x.trashed = true; }, { now: true }); this.renderHomeSoon(); this.toast('Proyecto en la papelera.', { action: { label: 'Deshacer', fn: () => { d.update(x => { x.trashed = false; }, { now: true }); this.renderHomeSoon(); } } }); } });
     UI.menu(a, items);
   },
@@ -473,12 +486,26 @@ const App = {
     if (RT.canWrite) hd.append(ibtn('plus', 'Agregar ' + k.unit.toLowerCase() + ' o sección', (e) => Pages.addMenu(e.currentTarget)));
     sec.append(hd);
     const list = h('div', { class: 'chlist' });
+    let curPart = null;
     (P.chapters || []).forEach((c, i) => {
+      if (c.role === 'parte') {
+        curPart = c;
+        const kids = Collections.children(c.id), col = Collections.collapsed(c.id);
+        const words = kids.reduce((n, z) => { const dz = this.ch(z.id); return n + (dz && dz.data ? chapterWords(dz.data) : 0); }, 0);
+        const it = h('div', { class: 'chi part' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (col ? ' col' : '') });
+        it.append(h('button', { type: 'button', class: 'tog', 'aria-expanded': col ? 'false' : 'true', 'aria-label': (col ? 'Mostrar' : 'Ocultar') + ' ' + (c.title || 'parte'), onclick: () => Collections.toggleCollapse(c.id) }, col ? '▸' : '▾'),
+          h('button', { class: 'go', type: 'button', onclick: () => { this.go(this.chHash(c.id)); this.toggleSide(false); } }, h('span', { class: 't', text: c.title || Collections.partLabel(c) }), h('span', { class: 'w', text: kids.length + (words ? ' · ' + (words >= 1000 ? (words / 1000).toFixed(1).replace('.', ',') + 'k' : words) : '') })));
+        if (RT.canWrite) it.append(ibtn('more', 'Opciones de ' + (c.title || 'la parte'), (e) => this.chapterMenu(e.currentTarget, c.id), { class: 'ibtn more' }));
+        list.append(it);
+        return;
+      }
+      if (curPart && Pages.role(c) && !SPECIAL[c.role].front) curPart = null;
+      if (curPart && Collections.collapsed(curPart.id)) return;
       const d = this.ch(c.id);
       const w = d && d.data ? chapterWords(d.data) : null;
       const open = d && d.data ? allMarks(d.data).filter(x => !x.m.done && x.m.type !== 'bien').length : 0;
       const role = Pages.role(c), num = role ? null : Pages.number(c.id);
-      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (role ? ' special' : '') });
+      const item = h('div', { class: 'chi' + (this.tab === 'escribir' && this.cid === c.id ? ' cur' : '') + (role ? ' special' : '') + (curPart ? ' in-part' : '') });
       const go = h('button', { class: 'go', type: 'button', onclick: () => { this.go(this.chHash(c.id)); this.toggleSide(false); } },
         h('span', { class: 'n', text: role ? '§' : String(num).padStart(2, '0'), title: role ? SPECIAL[role].l : '' }), h('span', { class: 't', text: c.title || (role ? SPECIAL[role].l : k.unit + ' ' + num) }),
         w != null ? h('span', { class: 'w', text: w >= 1000 ? (w / 1000).toFixed(1).replace('.', ',') + 'k' : String(w) }) : null);
@@ -567,7 +594,10 @@ const App = {
       { label: 'Subir', disabled: i === 0, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j > 0) a.splice(j - 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Bajar', disabled: i === list.length - 1, onClick: () => pd.update(x => { const a = x.chapters; const j = a.findIndex(c => c.id === cid); if (j >= 0 && j < a.length - 1) a.splice(j + 1, 0, a.splice(j, 1)[0]); }, { now: true }) },
       { label: 'Agregar después', onClick: () => this.addChapter(cid) },
-      { label: 'Tipo: ' + (Pages.role(list[i]) ? SPECIAL[list[i].role].l : 'normal (numerado)') + '…', onClick: () => setTimeout(() => Pages.roleMenu(anchor, cid), 30) },
+      list[i].role !== 'parte' ? { label: 'Mover a una parte…', onClick: () => setTimeout(() => Collections.partMenu(anchor, cid), 30) } : null,
+      list[i].role !== 'parte' ? { label: 'Mover a otro proyecto…', onClick: () => Collections.chapterTo(cid, true) } : null,
+      list[i].role !== 'parte' ? { label: 'Copiar a otro proyecto…', onClick: () => Collections.chapterTo(cid, false) } : null,
+      list[i].role !== 'parte' ? { label: 'Tipo: ' + (Pages.role(list[i]) ? SPECIAL[list[i].role].l : 'normal (numerado)') + '…', onClick: () => setTimeout(() => Pages.roleMenu(anchor, cid), 30) } : null,
       { label: 'Duplicar', onClick: () => this.duplicateChapter(cid) },
       { sep: true },
       { label: 'Historial de versiones', onClick: () => { this.go(this.chHash(cid)); setTimeout(() => Versions.open(cid), 80); } },
