@@ -38,7 +38,7 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   await pg.keyboard.press('ArrowRight'); await sleep(700);
   ok(await pg.evaluate((i) => Lectura.idx === i + 2, st.idx), 'flecha derecha pasa a la doble página siguiente');
   ok(await pg.evaluate(() => Lectura.prefs().anim === true), 'animación activada por defecto');
-  await pg.evaluate(() => Array.from(document.querySelectorAll('.rd-seg button')).find(b => /^1 página/.test(b.textContent)).click()); await sleep(500);
+  await pg.evaluate(() => Array.from(document.querySelectorAll('.rd-seg button')).find(b => /^1 pág/.test(b.textContent)).click()); await sleep(500);
   ok(await pg.evaluate(() => Lectura.spread === 1 && !document.querySelector('.reader.spread')), 'cambia a una página');
   await pg.screenshot({ path: path.resolve(__dirname, '_lectura1.png') });
   await pg.evaluate(() => document.querySelector('.rd-tog').click());

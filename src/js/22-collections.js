@@ -83,7 +83,11 @@ const Collections = {
     const name = await UI.prompt('Nueva carpeta', 'Nombre de la carpeta', ''); if (!name || !name.trim()) return;
     const n = name.trim();
     const f = App.prefs.folders || []; if (!f.includes(n)) { f.push(n); App.prefs.folders = f; App.savePrefs(); }
-    if (d) this.setFolder(d, n); else { App.prefs.homeFolder = n; App.savePrefs(); App.renderHomeSoon(); }
+    if (d) this.setFolder(d, n);
+    else {
+      App.prefs.homeFolder = n; App.savePrefs(); App.renderHomeSoon();
+      App.toast('Carpeta «' + n + '» creada. Lleva proyectos a ella desde su menú «⋯ → Carpeta».');
+    }
   },
   folderMenu(anchor, d) {
     const cur = d.data.folder || null;
@@ -107,14 +111,14 @@ const Collections = {
   /* Barra de carpetas del inicio. */
   folderBar(list) {
     const fs = this.folders();
-    // la barra aparece cuando hay carpetas o suficientes proyectos como para ordenarlos
-    if (!fs.length && (!RT.canWrite || list.length < 3)) return null;
+    if (!fs.length && (!RT.canWrite || !list.length)) return null;
     const cur = App.prefs.homeFolder && fs.includes(App.prefs.homeFolder) ? App.prefs.homeFolder : null;
     const bar = h('div', { class: 'fbar', role: 'tablist', 'aria-label': 'Carpetas' });
     const chip = (label, val, n) => h('button', { type: 'button', role: 'tab', class: 'fchip' + (cur === val ? ' on' : ''), 'aria-selected': cur === val ? 'true' : 'false', onclick: () => { App.prefs.homeFolder = val; App.savePrefs(); App.renderHomeSoon(); } }, icon(val ? 'folder' : 'grid'), h('span', { text: label }), h('b', { text: String(n) }));
-    bar.append(chip('Todos', null, list.length));
+    if (fs.length) bar.append(chip('Todos', null, list.length));
     fs.forEach(f => bar.append(chip(f, f, list.filter(x => x.doc.data.folder === f).length)));
-    if (RT.canWrite) bar.append(h('button', { type: 'button', class: 'fchip add', onclick: () => this.newFolder(null) }, icon('plus'), h('span', { text: 'Carpeta' })));
+    if (RT.canWrite) bar.append(h('button', { type: 'button', class: 'fchip add', title: 'Agrupa proyectos en una carpeta (por ejemplo, poemas sueltos para un poemario)', onclick: () => this.newFolder(null) }, icon('folder'), h('span', { text: 'Crear carpeta' })));
+    if (!fs.length) bar.append(h('span', { class: 'fbar-hint', text: 'Agrupa proyectos; después puedes juntarlos en un libro.' }));
     if (cur && RT.canWrite) {
       bar.append(h('span', { class: 'spacer' }));
       const inF = list.filter(x => x.doc.data.folder === cur);

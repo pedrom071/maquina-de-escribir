@@ -11,7 +11,7 @@ const Lectura = {
     const ov = h('div', { class: 'reader' + (poesia ? ' poesia' : ''), role: 'dialog', 'aria-label': 'Modo lectura', tabindex: '-1' });
     // barra superior
     const spreadSeg = h('div', { class: 'seg rd-seg', role: 'radiogroup', 'aria-label': 'Páginas' });
-    [['auto', 'Auto'], ['1', '1 página'], ['2', '2 páginas']].forEach(([v, l]) => spreadSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': pr.spread === v ? 'true' : 'false', text: l, onclick: (e) => { this.setPref('spread', v); $$('button', spreadSeg).forEach(b => b.setAttribute('aria-checked', b === e.currentTarget ? 'true' : 'false')); this.layout(true); } })));
+    [['auto', 'Auto'], ['1', '1 pág.'], ['2', '2 pág.']].forEach(([v, l]) => spreadSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': pr.spread === v ? 'true' : 'false', text: l, onclick: (e) => { this.setPref('spread', v); $$('button', spreadSeg).forEach(b => b.setAttribute('aria-checked', b === e.currentTarget ? 'true' : 'false')); this.layout(true); } })));
     const animBtn = h('button', { type: 'button', class: 'rd-tog', 'aria-pressed': pr.anim ? 'true' : 'false', title: 'Animación al pasar página', onclick: () => { const v = !this.prefs().anim; this.setPref('anim', v); animBtn.setAttribute('aria-pressed', v ? 'true' : 'false'); } }, 'Animación');
     this.where = h('span', { class: 'rd-where' });
     const top = h('div', { class: 'rd-top' },
@@ -76,14 +76,19 @@ const Lectura = {
     const pcs = getComputedStyle(probe);
     const sheetW = parseFloat(pcs.width) || 736, padX = parseFloat(pcs.paddingLeft) || 64, fsz = parseFloat(pcs.fontSize) || 19;
     probe.remove();
-    const pad0 = Math.min(padX, Math.max(18, sheetW * 0.09));
-    const availW = vw - (vw < 700 ? 16 : 150), H = Math.max(320, vh - 150);
-    const sp = pr.spread === 'auto' ? (vw > vh && availW >= 2 * sheetW * 0.72 ? 2 : 1) : +pr.spread;
+    // espacio disponible (descontando las barras de arriba y abajo)
+    const narrow = vw < 700;
+    const availW = vw - (narrow ? 16 : 120), availH = Math.max(300, vh - (narrow ? 112 : 124));
+    // proporción de página de libro: alto ≈ 1,2–1,55 veces el ancho
+    const fit = (sp) => Math.min(sheetW, availW / sp, availH / 1.2);
+    const sp = pr.spread === 'auto' ? (vw > vh && fit(2) >= sheetW * 0.62 ? 2 : 1) : +pr.spread;
     this.spread = sp;
-    const sc = Math.min(1, availW / (sp * sheetW));
+    const pageW = Math.max(240, Math.floor(fit(sp)));
+    // la letra sigue tu tamaño; si la página es más angosta que tu hoja, baja como mucho a 85 % y las líneas se acortan
+    const sc = Math.max(0.85, Math.min(1, pageW / sheetW));
     this.scale = sc;
-    const pageW = Math.max(240, Math.round(sheetW * sc));
-    const pad = Math.max(14, Math.round(pad0 * sc));
+    const H = Math.round(Math.min(availH, pageW * (narrow ? 1.75 : 1.55)));
+    const pad = Math.round(Math.max(narrow ? 18 : 24, Math.min(padX * sc, pageW * 0.09)));
     this.flow.style.fontSize = (fsz * sc).toFixed(2) + 'px';
     const cw = pageW - 2 * pad;
     this.stride = pageW;

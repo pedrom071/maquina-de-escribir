@@ -688,14 +688,14 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 body.reading{overflow:hidden}
 .reader{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;outline:none;animation:rd-in .25s ease}
 @keyframes rd-in{from{opacity:0}to{opacity:1}}
-.rd-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.6rem 1rem;flex-wrap:wrap}
+.rd-top{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.5rem .9rem;height:52px;flex:0 0 auto}
 .rd-ttl{min-width:0;font-size:.875rem;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rd-ttl b{font:400 1.05rem var(--f-display);color:var(--ink)}
-.rd-ctl{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.rd-ctl{display:flex;align-items:center;gap:.4rem;flex:0 0 auto}
 .rd-seg button{font-size:.75rem;padding:.25rem .55rem}
 .rd-tog{border:1px solid var(--line2);background:none;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;color:var(--soft);cursor:pointer}
 .rd-tog[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-.rd-stage{flex:1;display:flex;align-items:center;justify-content:center;gap:.6rem;min-height:0}
+.rd-stage{flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:0}
 .rd-book{position:relative;background:var(--sheet);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 14px 40px -12px rgba(0,0,0,.25);overflow:hidden;user-select:none;-webkit-user-select:none}
 .reader.spread .rd-book::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:60px;margin-left:-30px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.07) 45%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.07) 55%,transparent);pointer-events:none}
 .rd-clip{position:absolute;inset:0;overflow:hidden}
@@ -724,11 +724,12 @@ body.reading{overflow:hidden}
 @keyframes rd-sweep-b{0%{opacity:.9;background:linear-gradient(270deg,transparent 60%,rgba(0,0,0,.10) 85%,transparent)}100%{opacity:0}}
 .rd-arrow{border:0;background:none;color:var(--soft);font:300 2.4rem/1 var(--f-display);width:48px;height:80px;cursor:pointer;border-radius:6px;transition:color .15s,background .15s}
 .rd-arrow:hover{color:var(--accent);background:var(--accent-soft)}
-.rd-bottom{display:flex;align-items:center;gap:.9rem;padding:.6rem 1.2rem .9rem;justify-content:center;flex-wrap:wrap}
+.rd-bottom{display:flex;align-items:center;gap:.9rem;padding:.4rem 1.2rem .7rem;justify-content:center;height:44px;flex:0 0 auto}
 .rd-bottom input[type=range]{width:min(26rem,60vw);accent-color:var(--accent)}
 .rd-count{font:500 .75rem var(--f-mono);color:var(--soft);font-variant-numeric:tabular-nums}
 .rd-hint{font-size:.72rem;color:var(--faint)}
-@media (max-width:700px){.rd-arrow{display:none}.rd-hint{display:none}.rd-top{padding:.5rem .7rem}.rd-ctl .lbl{display:none}}
+@media (max-width:1000px){.rd-hint{display:none}.rd-ctl .lbl{display:none}}
+@media (max-width:700px){.rd-arrow{display:none}.rd-top{padding:.4rem .5rem;gap:.4rem}.rd-ttl{font-size:.8rem}.rd-ttl b{font-size:.95rem}.rd-where{display:none}.rd-tog{padding:.25rem .5rem}.rd-seg button{padding:.25rem .4rem}}
 @media (prefers-reduced-motion:reduce){.rd-flow{transition:none!important}.rd-turn{display:none}}
 
 /* ---------- ajustes de la revisión general ---------- */
@@ -752,6 +753,8 @@ body.reading{overflow:hidden}
 .st-jump button{border:0;background:none;border-radius:999px;padding:.3rem .75rem;font-size:.8rem;color:var(--soft);cursor:pointer}
 .st-jump button:hover{background:var(--accent-soft);color:var(--accent)}
 #st-resumen,#st-estilo,#st-rachas,#st-notas{scroll-margin-top:calc(var(--top-h) + 3.4rem)}
+.fbar-hint{font-size:.8rem;color:var(--soft)}
+@media (max-width:640px){.fbar-hint{display:none}}
 
 </style>
 </head>
@@ -761,7 +764,7 @@ body.reading{overflow:hidden}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '052794ca60';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = 'a49eb14ecb';</script>
 <script>
 (function () {
 'use strict';
@@ -7164,7 +7167,11 @@ const Collections = {
     const name = await UI.prompt('Nueva carpeta', 'Nombre de la carpeta', ''); if (!name || !name.trim()) return;
     const n = name.trim();
     const f = App.prefs.folders || []; if (!f.includes(n)) { f.push(n); App.prefs.folders = f; App.savePrefs(); }
-    if (d) this.setFolder(d, n); else { App.prefs.homeFolder = n; App.savePrefs(); App.renderHomeSoon(); }
+    if (d) this.setFolder(d, n);
+    else {
+      App.prefs.homeFolder = n; App.savePrefs(); App.renderHomeSoon();
+      App.toast('Carpeta «' + n + '» creada. Lleva proyectos a ella desde su menú «⋯ → Carpeta».');
+    }
   },
   folderMenu(anchor, d) {
     const cur = d.data.folder || null;
@@ -7188,14 +7195,14 @@ const Collections = {
   /* Barra de carpetas del inicio. */
   folderBar(list) {
     const fs = this.folders();
-    // la barra aparece cuando hay carpetas o suficientes proyectos como para ordenarlos
-    if (!fs.length && (!RT.canWrite || list.length < 3)) return null;
+    if (!fs.length && (!RT.canWrite || !list.length)) return null;
     const cur = App.prefs.homeFolder && fs.includes(App.prefs.homeFolder) ? App.prefs.homeFolder : null;
     const bar = h('div', { class: 'fbar', role: 'tablist', 'aria-label': 'Carpetas' });
     const chip = (label, val, n) => h('button', { type: 'button', role: 'tab', class: 'fchip' + (cur === val ? ' on' : ''), 'aria-selected': cur === val ? 'true' : 'false', onclick: () => { App.prefs.homeFolder = val; App.savePrefs(); App.renderHomeSoon(); } }, icon(val ? 'folder' : 'grid'), h('span', { text: label }), h('b', { text: String(n) }));
-    bar.append(chip('Todos', null, list.length));
+    if (fs.length) bar.append(chip('Todos', null, list.length));
     fs.forEach(f => bar.append(chip(f, f, list.filter(x => x.doc.data.folder === f).length)));
-    if (RT.canWrite) bar.append(h('button', { type: 'button', class: 'fchip add', onclick: () => this.newFolder(null) }, icon('plus'), h('span', { text: 'Carpeta' })));
+    if (RT.canWrite) bar.append(h('button', { type: 'button', class: 'fchip add', title: 'Agrupa proyectos en una carpeta (por ejemplo, poemas sueltos para un poemario)', onclick: () => this.newFolder(null) }, icon('folder'), h('span', { text: 'Crear carpeta' })));
+    if (!fs.length) bar.append(h('span', { class: 'fbar-hint', text: 'Agrupa proyectos; después puedes juntarlos en un libro.' }));
     if (cur && RT.canWrite) {
       bar.append(h('span', { class: 'spacer' }));
       const inF = list.filter(x => x.doc.data.folder === cur);
@@ -7365,7 +7372,7 @@ const Lectura = {
     const ov = h('div', { class: 'reader' + (poesia ? ' poesia' : ''), role: 'dialog', 'aria-label': 'Modo lectura', tabindex: '-1' });
     // barra superior
     const spreadSeg = h('div', { class: 'seg rd-seg', role: 'radiogroup', 'aria-label': 'Páginas' });
-    [['auto', 'Auto'], ['1', '1 página'], ['2', '2 páginas']].forEach(([v, l]) => spreadSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': pr.spread === v ? 'true' : 'false', text: l, onclick: (e) => { this.setPref('spread', v); $$('button', spreadSeg).forEach(b => b.setAttribute('aria-checked', b === e.currentTarget ? 'true' : 'false')); this.layout(true); } })));
+    [['auto', 'Auto'], ['1', '1 pág.'], ['2', '2 pág.']].forEach(([v, l]) => spreadSeg.append(h('button', { type: 'button', role: 'radio', 'aria-checked': pr.spread === v ? 'true' : 'false', text: l, onclick: (e) => { this.setPref('spread', v); $$('button', spreadSeg).forEach(b => b.setAttribute('aria-checked', b === e.currentTarget ? 'true' : 'false')); this.layout(true); } })));
     const animBtn = h('button', { type: 'button', class: 'rd-tog', 'aria-pressed': pr.anim ? 'true' : 'false', title: 'Animación al pasar página', onclick: () => { const v = !this.prefs().anim; this.setPref('anim', v); animBtn.setAttribute('aria-pressed', v ? 'true' : 'false'); } }, 'Animación');
     this.where = h('span', { class: 'rd-where' });
     const top = h('div', { class: 'rd-top' },
@@ -7430,14 +7437,19 @@ const Lectura = {
     const pcs = getComputedStyle(probe);
     const sheetW = parseFloat(pcs.width) || 736, padX = parseFloat(pcs.paddingLeft) || 64, fsz = parseFloat(pcs.fontSize) || 19;
     probe.remove();
-    const pad0 = Math.min(padX, Math.max(18, sheetW * 0.09));
-    const availW = vw - (vw < 700 ? 16 : 150), H = Math.max(320, vh - 150);
-    const sp = pr.spread === 'auto' ? (vw > vh && availW >= 2 * sheetW * 0.72 ? 2 : 1) : +pr.spread;
+    // espacio disponible (descontando las barras de arriba y abajo)
+    const narrow = vw < 700;
+    const availW = vw - (narrow ? 16 : 120), availH = Math.max(300, vh - (narrow ? 112 : 124));
+    // proporción de página de libro: alto ≈ 1,2–1,55 veces el ancho
+    const fit = (sp) => Math.min(sheetW, availW / sp, availH / 1.2);
+    const sp = pr.spread === 'auto' ? (vw > vh && fit(2) >= sheetW * 0.62 ? 2 : 1) : +pr.spread;
     this.spread = sp;
-    const sc = Math.min(1, availW / (sp * sheetW));
+    const pageW = Math.max(240, Math.floor(fit(sp)));
+    // la letra sigue tu tamaño; si la página es más angosta que tu hoja, baja como mucho a 85 % y las líneas se acortan
+    const sc = Math.max(0.85, Math.min(1, pageW / sheetW));
     this.scale = sc;
-    const pageW = Math.max(240, Math.round(sheetW * sc));
-    const pad = Math.max(14, Math.round(pad0 * sc));
+    const H = Math.round(Math.min(availH, pageW * (narrow ? 1.75 : 1.55)));
+    const pad = Math.round(Math.max(narrow ? 18 : 24, Math.min(padX * sc, pageW * 0.09)));
     this.flow.style.fontSize = (fsz * sc).toFixed(2) + 'px';
     const cw = pageW - 2 * pad;
     this.stride = pageW;
