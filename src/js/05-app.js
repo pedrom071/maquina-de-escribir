@@ -235,7 +235,7 @@ const App = {
     return card;
   },
   projectMenu(a, d, space) {
-    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }];
+    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }, { label: 'Leer como libro', onClick: () => { this.go('p-' + d.id); setTimeout(() => Lectura.open(), 500); } }];
     if (this.colls.team && this.colls.mine) {
       if (space === 'mine') items.push({ label: 'Compartir con el equipo', onClick: () => this.moveProject(d.id, 'team') });
       else { items.push({ label: 'Hacer una copia privada', onClick: () => this.moveProject(d.id, 'mine', true) }); items.push({ label: 'Mover a mis proyectos', onClick: () => this.moveProject(d.id, 'mine') }); }
@@ -722,6 +722,7 @@ const App = {
       [keys('mod', 'K'), 'Ir a… (capítulo, sección, página)'],
       [keys('alt', 'pgdn') + ' / ' + keys('alt', 'pgup'), 'Capítulo siguiente / anterior'],
       [keys('mod', '.'), 'Modo foco (máquina de escribir)'],
+      [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
       ['Seleccionar texto', 'Marcar a mano o llevar al chat con Claude'],

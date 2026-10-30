@@ -72,10 +72,15 @@ const Pages = {
   navEl() {
     const prev = this.neighbor(-1), next = this.neighbor(1);
     const box = h('nav', { class: 'ch-nav', 'aria-label': 'Navegar entre ' + kindOf(App.P()).units.toLowerCase() });
-    const lab = (c) => this.label(c) + (c.title && c.title !== this.label(c) ? ': ' + c.title : '');
-    box.append(prev ? h('button', { type: 'button', class: 'prev', onclick: () => this.goChapter(-1) }, h('span', { class: 'k', text: '← Anterior' }), h('span', { class: 't', text: lab(prev) })) : h('span'));
-    box.append(h('button', { type: 'button', class: 'mid', onclick: () => this.palette(), title: 'Ir a… (' + keys('mod', 'K') + ')' }, 'Ir a…'));
-    box.append(next ? h('button', { type: 'button', class: 'next', onclick: () => this.goChapter(1) }, h('span', { class: 'k', text: 'Siguiente →' }), h('span', { class: 't', text: lab(next) })) : (RT.canWrite ? h('button', { type: 'button', class: 'next', onclick: (e) => this.addMenu(e.currentTarget) }, h('span', { class: 'k', text: 'Agregar →' }), h('span', { class: 't', text: 'Nuevo ' + App.unit().toLowerCase() + ' o sección' })) : h('span')));
+    const lab = (c) => c.title || this.label(c);
+    const sub = (c) => (c.title && c.title !== this.label(c)) ? this.label(c) : '';
+    box.append(prev ? h('button', { type: 'button', class: 'cn-link prev', onclick: () => this.goChapter(-1), title: keys('alt', 'pgup') }, h('span', { class: 'cn-arrow', text: '←' }), h('span', { class: 'cn-txt' }, h('span', { class: 'cn-k', text: sub(prev) || 'Anterior' }), h('span', { class: 'cn-t', text: lab(prev) }))) : h('span'));
+    const mid = h('div', { class: 'cn-mid' });
+    mid.append(h('button', { type: 'button', class: 'cn-ico', onclick: () => this.palette(), title: 'Ir a… (' + keys('mod', 'K') + ')', 'aria-label': 'Ir a…' }, icon('search')));
+    mid.append(h('button', { type: 'button', class: 'cn-ico', onclick: () => Lectura.open(App.cid), title: 'Leer como libro (' + keys('mod', 'shift', 'L') + ')', 'aria-label': 'Modo lectura' }, icon('leer')));
+    if (RT.canWrite) mid.append(h('button', { type: 'button', class: 'cn-ico', onclick: (e) => this.addMenu(e.currentTarget), title: 'Agregar ' + App.unit().toLowerCase() + ', parte o sección', 'aria-label': 'Agregar' }, icon('plus')));
+    box.append(mid);
+    box.append(next ? h('button', { type: 'button', class: 'cn-link next', onclick: () => this.goChapter(1), title: keys('alt', 'pgdn') }, h('span', { class: 'cn-txt' }, h('span', { class: 'cn-k', text: sub(next) || 'Siguiente' }), h('span', { class: 'cn-t', text: lab(next) })), h('span', { class: 'cn-arrow', text: '→' })) : h('span'));
     return box;
   },
   /* Paleta «Ir a…»: capítulos, secciones especiales, páginas del capítulo y vistas del proyecto. */

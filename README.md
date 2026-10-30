@@ -19,6 +19,7 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 - **La IA prima.** Cuando revisa, la IA recibe las marcas automáticas como candidatas: confirma las correctas, descarta los falsos positivos (nombres propios, chilenismos, estilo buscado) y agrega lo que falta. Queda una sola lista, y lo descartado no vuelve a aparecer. Se puede desactivar en Ajustes.
 - **Revisión con IA, con tu propia clave.** Con una clave de Anthropic (Claude), OpenAI o un servicio compatible (OpenRouter, Ollama), revisa coherencia y ambigüedades, hace informes del capítulo, extrae datos a la biblia y responde preguntas sobre tu texto. La clave se guarda solo en tu navegador y el texto va directo al proveedor que elijas.
 - **Diálogos.** Atajos que solo insertan la raya: Alt + guion abre una línea de diálogo y Alt + I abre o cierra el inciso del narrador. «Revisar diálogos» (a pedido) señala espacios de más, rayas de cierre que faltan o sobran, puntuación del inciso y verbos en mayúscula, según las normas de la RAE.
+- **Modo lectura.** El proyecto como libro, a una o dos páginas, con animación suave al pasar página (se puede quitar). Se abre con Ctrl/⌘ + Shift + L; doble clic en un párrafo vuelve a editarlo.
 - **Notas.** Marcas propias, respuestas, correcciones aplicables, resueltas y cabos sueltos.
 - **Biblia.** Fichas por sección (personajes, lugares, mundo…), apariciones en el texto, cabos sueltos y decisiones.
 - **Diagramas.** Mapa de relaciones y línea de tiempo que compara el orden de la historia con el orden del relato. Se exportan en SVG y PNG.
@@ -37,6 +38,7 @@ Funciona en el navegador, sin cuenta y sin conexión, y se puede instalar como a
 | Ctrl/⌘ + K | Ir a… (capítulo, sección, página) |
 | Alt + AvPág / RePág | Capítulo siguiente / anterior |
 | Ctrl/⌘ + . (punto) | Modo foco |
+| Ctrl/⌘ + Shift + L | Leer como libro |
 | Alt + - (guion) | Diálogo: línea nueva con raya |
 | Alt + I | Diálogo: abre o cierra el inciso |
 | ? | Ayuda |

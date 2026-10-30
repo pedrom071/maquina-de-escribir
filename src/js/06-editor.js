@@ -118,6 +118,7 @@ const Editor = {
     if (RT.canWrite) tools.append(btn([icon('spark'), h('span', { class: 'lbl', text: 'Revisar' })], (e) => this.reviewMenu(e.currentTarget), 'small'));
     if ((App.P() || {}).kind === 'poesia') tools.append(btn([icon('metro'), h('span', { class: 'lbl', text: 'Métrica' })], () => Metrica.open(), 'small'));
     tools.append(btn([icon('eye'), h('span', { class: 'lbl', text: 'Ver' })], (e) => this.viewMenu(e.currentTarget), 'small'));
+    tools.append(ibtn('leer', 'Leer como libro (' + keys('mod', 'shift', 'L') + ')', () => Lectura.open(this.cid)));
     tools.append(ibtn('clock', 'Historial de versiones', () => Versions.open(this.cid)));
     tools.append(ibtn('more', 'Más opciones', (e) => this.moreMenu(e.currentTarget)));
     bar.append(this.chipsEl, tools);
@@ -185,7 +186,8 @@ const Editor = {
       { label: 'Medir versos…', onClick: () => Metrica.open() },
       { sep: true },
       { label: 'Ver todas las notas en lista', onClick: () => this.notesDrawer() },
-      { label: 'Modo foco', kbd: keys('mod', '.'), onClick: () => this.setFocus(true) }
+      { label: 'Modo foco', kbd: keys('mod', '.'), onClick: () => this.setFocus(true) },
+      { label: 'Leer como libro (una o dos páginas)', kbd: keys('mod', 'shift', 'L'), onClick: () => Lectura.open(this.cid) }
     ]);
   },
   moreMenu(a) {
