@@ -35,6 +35,14 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   ok(await pg.evaluate((id) => { const br = document.querySelector('.rd-book').getBoundingClientRect(); const r = document.querySelector('.rd-flow section[data-cid="' + id + '"] h2').getBoundingClientRect(); return r.left >= br.left - 2 && r.right <= br.right + 2; }, c1), 'abre en el capítulo actual (después del prólogo)');
   ok(await pg.evaluate(() => Math.abs(parseFloat(getComputedStyle(document.querySelector('.rd-flow')).fontSize) - 19 * Lectura.scale) < 0.6 && Lectura.scale > 0.7), 'letra y hoja proporcionales a tu apariencia (escala ' + await pg.evaluate(() => Lectura.scale.toFixed(2)) + ')');
   await pg.screenshot({ path: path.resolve(__dirname, '_lectura2.png') });
+  await pg.screenshot({ path: path.resolve(__dirname, '_lectura2.png') });
+  const before = await pg.evaluate(() => [parseFloat(getComputedStyle(document.querySelector('.rd-flow')).fontSize), Lectura.total]);
+  await pg.keyboard.press('+'); await sleep(400); await pg.keyboard.press('+'); await sleep(400);
+  const after = await pg.evaluate(() => [parseFloat(getComputedStyle(document.querySelector('.rd-flow')).fontSize), Lectura.total, document.querySelector('.rd-zl').textContent]);
+  ok(after[0] > before[0] && after[1] >= before[1] && after[2] === '120 %', 'A+ agranda la letra (' + before[0] + '→' + after[0] + ' px, ' + after[2] + ')');
+  await pg.evaluate(() => document.querySelector('.rd-zl').click()); await sleep(300);
+  ok(await pg.evaluate(() => Lectura.prefs().font === 1), 'el 100 % vuelve al tamaño de tu apariencia');
+  ok(await pg.evaluate(() => document.querySelector('.rd-book').getBoundingClientRect().height >= window.innerHeight - 130), 'el cuadernillo usa casi todo el alto');
   await pg.keyboard.press('ArrowRight'); await sleep(700);
   ok(await pg.evaluate((i) => Lectura.idx === i + 2, st.idx), 'flecha derecha pasa a la doble página siguiente');
   ok(await pg.evaluate(() => Lectura.prefs().anim === true), 'animación activada por defecto');

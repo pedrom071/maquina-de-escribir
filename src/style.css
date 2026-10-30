@@ -735,3 +735,13 @@ body.reading{overflow:hidden}
 #st-resumen,#st-estilo,#st-rachas,#st-notas{scroll-margin-top:calc(var(--top-h) + 3.4rem)}
 .fbar-hint{font-size:.8rem;color:var(--soft)}
 @media (max-width:640px){.fbar-hint{display:none}}
+.rd-zoom{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:999px;overflow:hidden;background:var(--sheet)}
+.rd-zoom button{border:0;background:none;cursor:pointer;color:var(--ink);padding:.2rem .55rem;font:inherit;line-height:1}
+.rd-zoom button:hover{background:var(--accent-soft);color:var(--accent)}
+.rd-zoom .a-s{font:500 .72rem var(--f-display)}
+.rd-zoom .a-l{font:500 1.05rem var(--f-display)}
+.rd-zoom .rd-zl{font:500 .68rem var(--f-mono);color:var(--soft);min-width:3.2rem;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.rd-stage{position:relative}
+.rd-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3}
+.rd-arrow.prev{left:4px}.rd-arrow.next{right:4px}
+@media (max-width:700px){.rd-zoom .rd-zl{min-width:2.6rem}.rd-zoom button{padding:.2rem .4rem}}

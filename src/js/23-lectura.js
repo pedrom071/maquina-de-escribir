@@ -1,7 +1,15 @@
 /* ============ modo lectura: el proyecto como libro, a una o dos páginas ============ */
 const Lectura = {
   el: null, flow: null, idx: 0, total: 1, spread: 1, stride: 600,
-  prefs() { const r = App.prefs.reader || {}; return { spread: r.spread || 'auto', anim: r.anim !== false }; },
+  prefs() { const r = App.prefs.reader || {}; return { spread: r.spread || 'auto', anim: r.anim !== false, font: +r.font || 1 }; },
+  /* Agranda o achica la letra solo en la lectura (sin tocar tu apariencia). */
+  zoom(dir) {
+    const steps = [0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5, 1.7];
+    const cur = this.prefs().font; let i = steps.findIndex(x => x >= cur - 0.001); if (i < 0) i = 3;
+    const v = dir === 0 ? 1 : steps[Math.max(0, Math.min(steps.length - 1, i + dir))];
+    this.setPref('font', v); this.layout(true);
+    if (this.zoomLbl) this.zoomLbl.textContent = Math.round(v * 100) + ' %';
+  },
   setPref(k, v) { App.prefs.reader = Object.assign(this.prefs(), { [k]: v }); App.savePrefs(); },
   open(startCid, startPid) {
     if (!App.P()) return;
@@ -16,7 +24,12 @@ const Lectura = {
     this.where = h('span', { class: 'rd-where' });
     const top = h('div', { class: 'rd-top' },
       h('div', { class: 'rd-ttl' }, h('b', { text: P.title }), this.where),
-      h('div', { class: 'rd-ctl' }, spreadSeg, animBtn,
+      h('div', { class: 'rd-ctl' },
+        h('div', { class: 'rd-zoom', role: 'group', 'aria-label': 'Tamaño de letra' },
+          h('button', { type: 'button', title: 'Letra más chica (−)', 'aria-label': 'Letra más chica', onclick: () => this.zoom(-1) }, h('span', { class: 'a-s', text: 'A' })),
+          (this.zoomLbl = h('button', { type: 'button', class: 'rd-zl', title: 'Volver al tamaño de tu apariencia', onclick: () => this.zoom(0), text: Math.round(pr.font * 100) + ' %' })),
+          h('button', { type: 'button', title: 'Letra más grande (+)', 'aria-label': 'Letra más grande', onclick: () => this.zoom(1) }, h('span', { class: 'a-l', text: 'A' }))),
+        spreadSeg, animBtn,
         btn([icon('pen'), h('span', { class: 'lbl', text: 'Editar aquí' })], () => this.editHere(), 'small'),
         ibtn('close', 'Cerrar lectura (Esc)', () => this.close())));
     // libro
@@ -40,7 +53,7 @@ const Lectura = {
     this.range = h('input', { type: 'range', min: '1', max: '1', value: '1', 'aria-label': 'Página' });
     this.range.addEventListener('input', () => this.goto(+this.range.value - 1, false));
     this.count = h('span', { class: 'rd-count' });
-    const bottom = h('div', { class: 'rd-bottom' }, this.range, this.count, h('span', { class: 'rd-hint', text: 'Doble clic en un párrafo para editarlo · ← → para pasar página' }));
+    const bottom = h('div', { class: 'rd-bottom' }, this.range, this.count, h('span', { class: 'rd-hint', text: 'Doble clic en un párrafo para editarlo · ← → pasar página · + − tamaño de letra' }));
     ov.append(top, h('div', { class: 'rd-stage' }, prev, this.book, next), bottom);
     document.body.append(ov); document.body.classList.add('reading');
     this.el = ov;
@@ -55,6 +68,8 @@ const Lectura = {
       const kmap = { ArrowRight: 1, ArrowLeft: -1, PageDown: 1, PageUp: -1, ' ': e.shiftKey ? -1 : 1 };
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.close(); return; }
       if (e.key in kmap) { e.preventDefault(); e.stopPropagation(); this.go(kmap[e.key]); return; }
+      if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); this.zoom(1); return; }
+      if ((e.key === '-' || e.key === '_') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); this.zoom(-1); return; }
       if (e.key === 'Home') { e.preventDefault(); this.goto(0); } else if (e.key === 'End') { e.preventDefault(); this.goto(this.total - 1); }
     };
     document.addEventListener('keydown', this.keyH, true);
@@ -76,20 +91,23 @@ const Lectura = {
     const pcs = getComputedStyle(probe);
     const sheetW = parseFloat(pcs.width) || 736, padX = parseFloat(pcs.paddingLeft) || 64, fsz = parseFloat(pcs.fontSize) || 19;
     probe.remove();
-    // espacio disponible (descontando las barras de arriba y abajo)
+    // espacio disponible: el cuadernillo usa casi toda la pantalla (las flechas van encima de los costados)
     const narrow = vw < 700;
-    const availW = vw - (narrow ? 16 : 120), availH = Math.max(300, vh - (narrow ? 112 : 124));
-    // proporción de página de libro: alto ≈ 1,2–1,55 veces el ancho
-    const fit = (sp) => Math.min(sheetW, availW / sp, availH / 1.2);
-    const sp = pr.spread === 'auto' ? (vw > vh && fit(2) >= sheetW * 0.62 ? 2 : 1) : +pr.spread;
+    const availW = vw - (narrow ? 12 : 96), availH = Math.max(300, vh - (narrow ? 104 : 112));
+    // letra: tu tamaño × el ajuste de la lectura (A− / A+); en el celular, un poco menor
+    const userF = pr.font;
+    const baseF = fsz * userF * (narrow ? 0.9 : 1);
+    // ancho de página: lo que permita la pantalla, sin pasar de ~75 letras por línea
+    const maxLine = baseF * 36 + 2 * Math.min(padX, 64);
+    const fit = (sp) => Math.min(maxLine, availW / sp, availH / (sp === 2 ? 1.02 : 1.08));
+    const sp = pr.spread === 'auto' ? (vw > vh && fit(2) >= baseF * 24 ? 2 : 1) : +pr.spread;
     this.spread = sp;
     const pageW = Math.max(240, Math.floor(fit(sp)));
-    // la letra sigue tu tamaño; si la página es más angosta que tu hoja, baja como mucho a 85 % y las líneas se acortan
-    const sc = Math.max(0.85, Math.min(1, pageW / sheetW));
+    const sc = baseF / fsz;
     this.scale = sc;
-    const H = Math.round(Math.min(availH, pageW * (narrow ? 1.75 : 1.55)));
-    const pad = Math.round(Math.max(narrow ? 18 : 24, Math.min(padX * sc, pageW * 0.09)));
-    this.flow.style.fontSize = (fsz * sc).toFixed(2) + 'px';
+    const H = Math.round(Math.min(availH, pageW * (narrow ? 1.9 : 1.6)));
+    const pad = Math.round(Math.max(narrow ? 16 : 26, Math.min(padX * Math.min(1, sc), pageW * 0.08)));
+    this.flow.style.fontSize = baseF.toFixed(2) + 'px';
     const cw = pageW - 2 * pad;
     this.stride = pageW;
     this.el.classList.toggle('spread', sp === 2);

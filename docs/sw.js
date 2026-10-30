@@ -1,5 +1,5 @@
 /* Service worker de Máquina de escribir: la app funciona sin conexión. */
-const VERSION = 'a49eb14ecb';
+const VERSION = '9ef981e097';
 const CACHE = 'mde-' + VERSION;
 const CORE = ['./', 'index.html', 'spell-worker.js', 'dict/es.aff', 'dict/es.dic', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE))); });
