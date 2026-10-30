@@ -30,7 +30,7 @@ const Ideas = {
   },
   close() { if (this.coll) { try { this.coll.close(); } catch (e) {} } this.coll = null; this.pid = null; },
   list() { const c = this.open(); return c ? c.list().map(d => Object.assign({ id: d.id, doc: d }, d.data)).filter(x => !x.deleted).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || (b.at || 0) - (a.at || 0)) : []; },
-  changed: debounce(function () { if (App.tab === 'ideas' && !Ideas.typing) Ideas.render(); if (window.Editor && Editor.root) Ideas.chapterBadge(); }, 120),
+  changed: debounce(function () { if (App.tab === 'ideas' && !Ideas.typing) Ideas.render(); if (window.Editor && Editor.root) Ideas.chapterBadge(); Ideas.fab(); if (App.view === 'project') App.renderSideSoon(); }, 120),
   /* ---------- clasificación sin IA ---------- */
   names() {
     const out = { personaje: [], lugar: [], otro: [] };
@@ -149,7 +149,11 @@ const Ideas = {
     st.textContent = '';
     const wrap = h('div', { class: 'ideas' });
     wrap.append(h('div', { class: 'vhead', style: 'margin:0' }, h('div', null, h('h2', { text: 'Ideas' }), h('p', { text: 'Notas sueltas, frases, imágenes y garabatos que todavía no sabes dónde van. Se ordenan solos por tema; tú decides qué hacer con ellos.' })),
-      h('div', { class: 'row' }, RT.canWrite && RT.sample && (!RT.web || AI.ready()) ? btn([icon('spark'), 'Ordenar con IA'], () => this.aiSort(), 'small') : null)));
+      h('div', { class: 'row' },
+        h('div', { class: 'seg idea-view', role: 'radiogroup', 'aria-label': 'Vista' },
+          h('button', { type: 'button', role: 'radio', 'aria-checked': this.view !== 'board' ? 'true' : 'false', onclick: () => { this.view = 'cards'; this.render(); } }, 'Tarjetas'),
+          h('button', { type: 'button', role: 'radio', 'aria-checked': this.view === 'board' ? 'true' : 'false', onclick: () => { this.view = 'board'; this.render(); } }, 'Por capítulo')),
+        RT.canWrite && RT.sample && (!RT.web || AI.ready()) ? btn([icon('spark'), 'IA: ordenar y ubicar'], () => this.aiSort(), 'small') : null)));
     // captura
     if (RT.canWrite) {
       const ta = h('textarea', { class: 'inp', id: 'idea-in', rows: '3', placeholder: 'Anota una idea… (' + keys('mod', 'enter') + ' para guardar; también puedes pegar o arrastrar una imagen)', 'aria-label': 'Nueva idea' });
@@ -191,6 +195,8 @@ const Ideas = {
     // tarjetas
     const q = fold(this.q.trim());
     const shown = all.filter(x => (this.filter === 'usadas' ? x.done : !x.done) && (this.filter === 'todas' || this.filter === 'usadas' || (this.filter === 'sinlugar' ? !x.cid : (x.cat || 'otra') === this.filter)) && (!q || fold(x.text || '').includes(q)) && (!this.chFilter || x.cid === this.chFilter));
+    this.prepSuggest();
+    if (this.view === 'board') { if (all.length) wrap.append(this.board(shown)); st.append(wrap); return; }
     const grid = h('div', { class: 'idea-grid' });
     shown.forEach(x => grid.append(this.card(x)));
     if (!all.length) wrap.append(h('div', { class: 'empty', text: 'Todavía no hay ideas. Anota la primera arriba, o usa ' + keys('alt', 'N') + ' desde cualquier parte del proyecto.' }));
@@ -210,12 +216,94 @@ const Ideas = {
     this.mentions(x.text).slice(0, 3).forEach(n => meta.append(h('span', { class: 'idea-who', text: n })));
     meta.append(h('button', { type: 'button', class: 'idea-ch', title: 'Dónde va', onclick: (e) => RT.canWrite && this.chMenu(e.currentTarget, x) }, ch ? '→ ' + (ch.title || Pages.label(ch)) : 'Sin lugar'));
     el.append(meta);
+    const sg = !x.cid && !x.done && RT.canWrite ? this.suggest(x) : null;
+    if (sg) el.append(h('div', { class: 'idea-sug' },
+      h('span', null, '¿Va en ', h('b', { text: sg.c.title || Pages.label(sg.c) }), '? ', h('span', { class: 'why', text: sg.why })),
+      h('button', { type: 'button', class: 'yes', onclick: () => this.update(x.id, z => { z.cid = sg.c.id; }) }, 'Sí'),
+      h('button', { type: 'button', class: 'no', title: 'No sugerir este lugar', onclick: () => this.update(x.id, z => { z.noSug = (z.noSug || []).concat(sg.c.id); delete z.aiSug; }) }, '×')));
     if (RT.canWrite) el.append(h('div', { class: 'idea-a' },
       h('button', { type: 'button', class: 'ia', title: x.pin ? 'Desfijar' : 'Fijar arriba', 'aria-pressed': x.pin ? 'true' : 'false', onclick: () => this.update(x.id, z => { z.pin = !z.pin; }) }, '★'),
       h('button', { type: 'button', class: 'ia', title: x.done ? 'Volver a pendientes' : 'Marcar como usada', onclick: () => this.update(x.id, z => { z.done = !z.done; }) }, x.done ? '↺' : '✓'),
       ibtn('more', 'Opciones', (e) => this.menu(e.currentTarget, x), { class: 'ibtn ia' })));
     el.append(h('time', { class: 'idea-d', text: relTime(x.at) }));
     return el;
+  },
+  /* ---------- dónde podría ir (sin IA): nombres de la biblia y palabras en común ---------- */
+  prepSuggest() {
+    const words = (t) => (fold(t).match(/[a-zñ]{5,}/g) || []).filter(w => !STOP.has(w)).map(w => w.slice(0, 6));
+    this.chStats = App.chapterList().filter(c => c.role !== 'parte').map(c => {
+      const d = App.ch(c.id); const text = d && d.data ? d.data.paras.map(parText).join('\n') : '';
+      const tf = new Map(); words(text).forEach(w => tf.set(w, (tf.get(w) || 0) + 1));
+      return { c: c, text: text, tf: tf, n: Math.max(1, countWords(text)) };
+    }).filter(s => s.n > 20);
+    const df = new Map(); this.chStats.forEach(s => s.tf.forEach((v, w) => df.set(w, (df.get(w) || 0) + 1)));
+    this.df = df;
+  },
+  suggest(x) {
+    if (x.aiSug && x.aiSug.cid && !(x.noSug || []).includes(x.aiSug.cid)) { const c = App.chapterList().find(z => z.id === x.aiSug.cid); if (c) return { c: c, why: x.aiSug.why || 'sugerencia de la IA' }; }
+    if (!this.chStats || this.chStats.length < 2 || !x.text) return null;
+    const N = this.chStats.length;
+    const ws = Array.from(new Set((fold(x.text).match(/[a-zñ]{5,}/g) || []).filter(w => !STOP.has(w)).map(w => w.slice(0, 6))));
+    const names = this.mentions(x.text);
+    let best = null, second = 0;
+    this.chStats.forEach(s => {
+      if ((x.noSug || []).includes(s.c.id)) return;
+      let score = 0; const shared = []; const who = [];
+      names.forEach(nm => { const k = (s.text.match(new RegExp('(?<![\\p{L}])' + escRe(nm) + '(?![\\p{L}])', 'giu')) || []).length; if (k) { score += 2 + Math.min(4, k) * 0.6; who.push(nm); } });
+      ws.forEach(w => { const f = s.tf.get(w); if (f) { const idf = Math.log(1 + N / (this.df.get(w) || 1)); score += idf * Math.min(3, f) * 0.9; if (idf > 0.5) shared.push(w); } });
+      score = score / Math.sqrt(1 + ws.length / 6);
+      if (!best || score > best.score) { if (best) second = Math.max(second, best.score); best = { c: s.c, score: score, who: who, shared: shared }; }
+      else second = Math.max(second, score);
+    });
+    if (!best || best.score < 1.2 || best.score < second * 1.3) return null;
+    const why = best.who.length ? '(ahí aparece ' + best.who.slice(0, 2).join(' y ') + ')' : best.shared.length ? '(comparte «' + best.shared.slice(0, 3).map(st => { const m = (x.text.match(/[\p{L}]{5,}/gu) || []).find(w => fold(w).startsWith(st)); return m ? m.toLowerCase() : st; }).join('», «') + '»)' : '';
+    return { c: best.c, why: why };
+  },
+  /* ---------- tablero: columnas por capítulo, se arrastra para ubicar ---------- */
+  board(shown) {
+    const cols = [{ id: null, label: 'Sin lugar' }].concat(App.chapterList().map(c => ({ id: c.id, label: c.title || Pages.label(c), part: c.role === 'parte' })));
+    const wrap = h('div', { class: 'idea-board' });
+    cols.forEach(col => {
+      const items = shown.filter(x => (x.cid || null) === col.id);
+      if (col.part && !items.length) { wrap.append(h('div', { class: 'ib-part', text: col.label })); return; }
+      const box = h('section', { class: 'ib-col' + (col.id ? '' : ' none'), dataset: { cid: col.id || '' } }, h('h4', null, h('span', { text: col.label }), h('b', { text: String(items.length) })));
+      const list = h('div', { class: 'ib-list' });
+      items.forEach(x => {
+        const sg = !x.cid ? this.suggest(x) : null;
+        const it = h('div', { class: 'ib-it', draggable: RT.canWrite ? 'true' : 'false', dataset: { id: x.id }, title: 'Arrastra a otro capítulo' },
+          x.img ? h('img', { src: x.img, alt: '' }) : null,
+          x.text ? h('p', { text: x.text.length > 140 ? x.text.slice(0, 140) + '…' : x.text }) : null,
+          h('span', { class: 'ib-cat', text: (IDEA_CATS[x.cat] || IDEA_CATS.otra).g + ' ' + (IDEA_CATS[x.cat] || IDEA_CATS.otra).l }),
+          sg ? h('button', { type: 'button', class: 'ib-sug', title: 'Llevar ahí ' + sg.why, onclick: () => this.update(x.id, z => { z.cid = sg.c.id; }) }, '→ ' + (sg.c.title || Pages.label(sg.c)) + '?') : null);
+        it.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/idea', x.id); it.classList.add('drag'); });
+        it.addEventListener('dragend', () => it.classList.remove('drag'));
+        it.addEventListener('click', (e) => { if (e.target.closest('.ib-sug') || !RT.canWrite) return; this.chMenu(it, x); });
+        list.append(it);
+      });
+      if (!items.length) list.append(h('div', { class: 'ib-empty', text: col.id ? 'Arrastra aquí' : 'Todo ubicado' }));
+      box.append(list);
+      box.addEventListener('dragover', (e) => { if (Array.from(e.dataTransfer.types).includes('text/idea')) { e.preventDefault(); box.classList.add('over'); } });
+      box.addEventListener('dragleave', () => box.classList.remove('over'));
+      box.addEventListener('drop', (e) => { e.preventDefault(); box.classList.remove('over'); const id = e.dataTransfer.getData('text/idea'); if (id) this.update(id, z => { z.cid = col.id; }); });
+      wrap.append(box);
+    });
+    return wrap;
+  },
+  /* ---------- botón flotante (en el editor y demás vistas del proyecto) ---------- */
+  fab() {
+    let b = $('#idea-fab');
+    const show = App.view === 'project' && RT.canWrite && !App.focus;
+    if (!show) { if (b) b.remove(); return; }
+    const n = this.coll ? this.list().filter(x => !x.done && !x.cid).length : 0;
+    if (!b) {
+      b = h('div', { id: 'idea-fab', class: 'idea-fab' },
+        h('button', { type: 'button', class: 'fab-main', title: 'Anotar una idea (' + keys('alt', 'N') + ')', onclick: () => this.quick() }, icon('idea'), h('span', { class: 'lbl', text: 'Idea' })),
+        h('button', { type: 'button', class: 'fab-all', title: 'Ver todas las ideas', onclick: () => App.go('p-' + App.pid + '-ideas') }, h('b')));
+      document.body.append(b);
+    }
+    const all = b.querySelector('.fab-all'); all.hidden = !n || App.tab === 'ideas';
+    all.querySelector('b').textContent = n > 99 ? '99+' : String(n);
+    all.title = plural(n, 'idea sin lugar', 'ideas sin lugar') + ' · ver todas';
   },
   catMenu(a, x) { UI.menu(a, Object.keys(IDEA_CATS).map(k => ({ label: IDEA_CATS[k].g + '  ' + IDEA_CATS[k].l, checked: x.cat === k, onClick: () => this.update(x.id, z => { z.cat = k; z.catAuto = false; }) }))); },
   chMenu(a, x) {
@@ -262,18 +350,27 @@ const Ideas = {
   /* Ordenar con IA: solo asigna categorías; no agrega ni cambia el texto. */
   async aiSort() {
     if (!Review.ok()) return;
-    const items = this.list().filter(x => x.text && x.catAuto && !x.done).slice(0, 60);
-    if (!items.length) { App.toast('No hay ideas sin clasificar a mano.'); return; }
-    App.toast('Ordenando ' + plural(items.length, 'idea') + '…', { id: 'ais', ms: 8000 });
-    const prompt = 'Clasifica cada idea de un proyecto de escritura en UNA categoría: ' + Object.keys(IDEA_CATS).join(', ') + '. No inventes ni reescribas nada; solo clasifica.\n' +
-      'Personajes de la biblia: ' + (this.names().personaje.join(', ') || '—') + '. Lugares: ' + (this.names().lugar.join(', ') || '—') + '.\n' +
-      'Responde solo JSON: [{"n":número,"cat":"categoría"}].\n\n' + items.map((x, i) => (i + 1) + '. ' + x.text.replace(/\s+/g, ' ').slice(0, 400)).join('\n');
+    const items = this.list().filter(x => x.text && !x.done && (x.catAuto || !x.cid)).slice(0, 60);
+    if (!items.length) { App.toast('No hay ideas pendientes de ordenar.'); return; }
+    App.toast('Ordenando ' + plural(items.length, 'idea') + '…', { id: 'ais', ms: 10000 });
+    const chs = App.chapterList().filter(c => c.role !== 'parte').map((c, i) => { const d = App.ch(c.id); const t = d && d.data ? d.data.paras.map(parText).join(' ') : ''; return { i: i + 1, c: c, t: t.replace(/\s+/g, ' ').slice(0, 700) }; });
+    const prompt = 'Ordena las ideas sueltas de un proyecto de escritura. Para cada idea: (1) una categoría entre ' + Object.keys(IDEA_CATS).join(', ') + '; (2) el número del capítulo donde calza mejor según lo que ya está escrito, o 0 si no se puede saber; (3) una razón breve (máximo 12 palabras) basada en el texto existente.\n' +
+      'No inventes trama, escenas ni contenido; no reescribas las ideas. Solo clasifica y ubica.\n' +
+      'Responde solo JSON: [{"n":número de idea,"cat":"categoría","cap":número de capítulo,"por":"razón"}].\n\nCAPÍTULOS (inicio de cada uno):\n' + chs.map(x => x.i + '. ' + (x.c.title || Pages.label(x.c)) + ': ' + (x.t || '(vacío)')).join('\n') +
+      '\n\nIDEAS:\n' + items.map((x, i) => (i + 1) + '. ' + x.text.replace(/\s+/g, ' ').slice(0, 400)).join('\n');
     try {
       const r = await RT.sample(prompt, { modelTier: 'quick' });
-      const arr = parseJsonLoose ? parseJsonLoose(r.text) : JSON.parse(r.text);
-      let n = 0;
-      (Array.isArray(arr) ? arr : []).forEach(o => { const x = items[(+o.n) - 1]; if (x && IDEA_CATS[o.cat] && o.cat !== x.cat) { this.update(x.id, z => { z.cat = o.cat; }); n++; } });
-      App.toast(n ? plural(n, 'idea reubicada', 'ideas reubicadas') + '.' : 'La clasificación ya estaba bien.', { id: 'ais' });
+      const arr = typeof parseJsonLoose === 'function' ? parseJsonLoose(r.text) : JSON.parse(r.text);
+      let nc = 0, ns = 0;
+      (Array.isArray(arr) ? arr : []).forEach(o => {
+        const x = items[(+o.n) - 1]; if (!x) return;
+        const ch = chs[(+o.cap) - 1];
+        this.update(x.id, z => {
+          if (z.catAuto && IDEA_CATS[o.cat] && o.cat !== z.cat) { z.cat = o.cat; nc++; }
+          if (!z.cid && ch && !(z.noSug || []).includes(ch.c.id)) { z.aiSug = { cid: ch.c.id, why: o.por ? '(' + String(o.por).slice(0, 90) + ')' : '' }; ns++; }
+        });
+      });
+      App.toast((nc ? plural(nc, 'idea reclasificada', 'ideas reclasificadas') + '. ' : '') + (ns ? plural(ns, 'sugerencia', 'sugerencias') + ' de lugar: confírmalas en cada tarjeta.' : 'Sin sugerencias de lugar.'), { id: 'ais', ms: 6000 });
     } catch (e) { App.toast('No se pudo ordenar ahora. Intenta de nuevo.', { id: 'ais' }); }
   },
   /* Indicador en el editor: ideas asignadas a este capítulo. */

@@ -148,6 +148,7 @@ const App = {
     document.body.classList.remove('focus');
     $('#btn-side').hidden = true; $('#btn-search').hidden = true;
     this.renderHome(); this.renderCrumbs(); this.renderStatus();
+    if (window.Ideas) Ideas.fab();
     if (window.Collab) Collab.setPresence();
   },
   renderHome() {
@@ -464,6 +465,7 @@ const App = {
       main.append(proj);
     }
     this.renderSide(); this.renderStage(); this.renderCrumbs(); this.renderStatus();
+    if (window.Ideas) { Ideas.open(); Ideas.fab(); }
     if (window.innerWidth <= 1100) this.toggleSide(false);
     if (window.Collab) Collab.setPresence();
   },
@@ -490,6 +492,7 @@ const App = {
     navItem('escribir', 'Escribir', 'pen', this.cid ? this.chHash(this.cid) : 'p-' + this.pid);
     navItem('biblia', 'Biblia', 'book', 'p-' + this.pid + '-biblia');
     navItem('ideas', 'Ideas', 'idea', 'p-' + this.pid + '-ideas');
+    if (window.Ideas && Ideas.coll && Ideas.pid === this.pid) { const n = Ideas.list().filter(x => !x.done).length; const last = nav.lastChild; if (n && last) last.append(h('span', { class: 'nav-n', text: String(n) })); }
     navItem('diagramas', 'Diagramas', 'graph', 'p-' + this.pid + '-diagramas');
     navItem('estadisticas', 'Estadísticas', 'chart', 'p-' + this.pid + '-estadisticas');
     navItem('ajustes', 'Ajustes', 'gear', 'p-' + this.pid + '-ajustes');

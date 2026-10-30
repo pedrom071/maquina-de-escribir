@@ -956,6 +956,7 @@ const Editor = {
     App.focus = on;
     document.body.classList.toggle('focus', on);
     if (!on && App.ultra) this.setUltra(false);
+    if (window.Ideas) Ideas.fab();
     const old = $('#focus-exit'); if (old) old.remove();
     if (on) {
       document.body.append(h('div', { class: 'focus-exit', id: 'focus-exit' },
