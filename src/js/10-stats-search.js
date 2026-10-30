@@ -23,8 +23,11 @@ const Stats = {
     });
     const wrap = h('div', { class: 'st' });
     wrap.append(h('div', { class: 'vhead', style: 'margin:0' }, h('div', null, h('h2', { text: 'Estadísticas' }), h('p', { text: 'Avance, ritmo de escritura y señales del texto. Toca una palabra o una frase para ir a ella.' }))));
+    const jump = h('nav', { class: 'st-jump', 'aria-label': 'Secciones' });
+    [['Resumen', 'st-resumen'], ['Estilo', 'st-estilo'], ['Rachas', 'st-rachas'], ['Notas', 'st-notas']].forEach(([l, id]) => jump.append(h('button', { type: 'button', onclick: () => { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, l)));
+    wrap.append(jump);
     const today = App.wordsToday();
-    const tiles = h('div', { class: 'tiles' });
+    const tiles = h('div', { class: 'tiles', id: 'st-resumen' });
     const tile = (v, k) => tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: v }), h('div', { class: 'k', text: k })));
     tile(fmtN(total), 'palabras');
     tile((today >= 0 ? '+' : '') + fmtN(today), 'hoy');
@@ -68,22 +71,22 @@ const Stats = {
 
     const two2 = h('div', { class: 'two' });
     let top = Array.from(freq.values()).sort((a, b) => b.n - a.n);
-    if (top.filter(t => t.n > 1).length >= 12) top = top.filter(t => t.n > 1);
+    top = top.filter(t => t.n > 1);
     top = top.slice(0, 36);
     const cloud = h('div', { class: 'wcloud' });
     top.forEach(t => cloud.append(h('button', { type: 'button', onclick: () => Search.open(t.w, true) }, t.w, h('b', { text: String(t.n) }))));
-    two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Palabras que más usas' }), top.length ? cloud : h('p', { class: 'muted', text: 'Escribe un poco más para ver tus palabras frecuentes.' })));
+    two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Palabras que más usas' }), top.length ? cloud : h('p', { class: 'muted', text: 'Todavía no hay palabras que se repitan. Aparecerán aquí a medida que escribas.' })));
     const lp = h('div', { class: 'longs' });
     longs.sort((a, b) => b.n - a.n).slice(0, 8).forEach(l => lp.append(h('button', { type: 'button', onclick: () => { App.go(App.chHash(l.cid)); setTimeout(() => Search.open(l.s.slice(0, 60)), 150); } }, l.s.length > 220 ? l.s.slice(0, 220) + '…' : l.s, h('span', { text: l.n + ' palabras · ' + App.unit().toLowerCase() + ' ' + l.ch }))));
     two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Frases más largas' }), longs.length ? lp : h('p', { class: 'muted', text: 'No hay frases de más de 40 palabras.' })));
     wrap.append(two2);
 
-    const nt = h('div', { class: 'panel' }, h('h3', { text: 'Notas del corrector' }));
+    const nt = h('div', { class: 'panel', id: 'st-notas' }, h('h3', { text: 'Notas del corrector' }));
     const rows = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem' });
     TKEYS.forEach(k => rows.append(h('span', { class: 'chip ' + k, style: 'cursor:default' }, h('span', { class: 'g', text: TYPES[k].g }), h('span', { text: TYPES[k].l }), h('span', { class: 'c', text: byType[k].open + ' abiertas · ' + byType[k].done + ' resueltas' }))));
     nt.append(rows);
     if (window.Style) Style.render(wrap);
-    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }));
+    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Object.assign(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }), { id: 'st-rachas' }));
     wrap.append(nt);
     st.append(wrap);
   }

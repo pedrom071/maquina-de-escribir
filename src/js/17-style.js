@@ -66,10 +66,11 @@ const Style = {
       const ws = t.match(/[\p{L}]+/gu) || [];
       ws.forEach(w => {
         const lw = w.toLowerCase();
-        r.words++; r.syl += syllables(w); toks.push(lw);
+        const sy = syllables(w);
+        r.words++; r.syl += sy; toks.push(lw);
         if (w.length >= 7 && lw.endsWith('mente')) r.mente++;
         if (/(?:ando|iendo|yendo)$/.test(lw) && lw.length >= 5 && !NOT_GERUND.has(lw)) r.gerund++;
-        if (syllables(w) >= 4) r.longWords++;
+        if (sy >= 4) r.longWords++;
       });
       const pas = t.match(/(?<![\p{L}])(?:fue|fueron|ha sido|han sido|había sido|habían sido|será|serán)\s+[\p{L}]+(?:ado|ada|ados|adas|ido|ida|idos|idas|cho|cha|chos|chas|to|ta|tos|tas)(?![\p{L}])/giu);
       if (pas) r.passive += pas.length;
@@ -126,7 +127,7 @@ const Style = {
     const P = App.P(); if (!P) return;
     const chs = App.chapterList().map((c, i) => { const d = App.ch(c.id); return { c: c, i: i, texts: d && d.data ? d.data.paras.map(parText) : [] }; });
     const all = this.compute(chs.reduce((a, x) => a.concat(x.texts), []));
-    const panel = h('div', { class: 'panel style-panel' });
+    const panel = h('div', { class: 'panel style-panel', id: 'st-estilo' });
     panel.append(h('h3', { text: 'Retrato del estilo' }), h('p', { class: 'muted', style: 'margin:-.4rem 0 .9rem;font-size:.8125rem', text: 'Medidas descriptivas, no reglas: sirven para ver tu voz y comparar ' + kindOf(P).units.toLowerCase() + ' entre sí.' }));
     if (all.words < 60) { panel.append(h('p', { class: 'muted', text: 'Escribe un poco más (unas 60 palabras) para ver el retrato.' })); wrap.append(panel); return; }
     panel.append(this.guide(all));

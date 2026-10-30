@@ -47,7 +47,8 @@ const UI = {
   toast(text, opts) {
     opts = opts || {};
     const box = $('#toast');
-    const item = h('div', null, h('span', { text: text }));
+    if (opts.id) $$('[data-tid="' + opts.id + '"]', box).forEach(x => x.remove());
+    const item = h('div', opts.id ? { dataset: { tid: opts.id } } : null, h('span', { text: text }));
     if (opts.action) item.append(h('button', { type: 'button', text: opts.action.label, onclick: () => { item.remove(); opts.action.fn(); } }));
     box.append(item);
     while (box.children.length > 3) box.firstChild.remove();

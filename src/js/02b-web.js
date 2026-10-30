@@ -119,6 +119,8 @@ const AI = {
   cfg() { try { return Object.assign({ provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }, JSON.parse(localStorage.getItem(AI_KEY) || '{}')); } catch (e) { return { provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }; } },
   save(c) { try { localStorage.setItem(AI_KEY, JSON.stringify(c)); } catch (e) {} },
   ready() { const c = this.cfg(); return !!(c.key || (c.provider === 'compat' && c.base)) && !!c.model; },
+  /* «Claude» en claude.ai o con clave de Anthropic; «la IA» con otros proveedores. */
+  name(cap) { const n = !RT.web || (this.ready() && this.label() === 'Claude') ? 'Claude' : 'la IA'; return cap ? n.charAt(0).toUpperCase() + n.slice(1) : n; },
   label() { const c = this.cfg(); return c.provider === 'anthropic' || /claude/.test(c.model || '') ? 'Claude' : 'IA'; },
   turns(input) {
     const list = typeof input === 'string' ? [{ role: 'user', content: input }] : input.slice();
@@ -322,7 +324,9 @@ const WebBackup = {
     RT.db._store.forEach((v, k) => { if (k.indexOf('projects/') === 0 || k.indexOf('data/') === 0) all[k] = v; });
     const n = Object.keys(all).filter(k => k.split('/').length === 2).length;
     await IO.save('maquina-de-escribir-respaldo-' + dayKey() + '.json', JSON.stringify({ format: 'maquina-de-escribir-todo', version: 1, exportedAt: new Date().toISOString(), docs: all }));
+    App.prefs.lastBackup = Date.now(); App.savePrefs();
     App.toast('Respaldo de ' + plural(n, 'proyecto') + ' descargado.');
+    if (App.view === 'home') App.renderHomeSoon();
   },
   async restore(file) {
     let j; try { j = JSON.parse(await file.text()); } catch (e) { App.toast('Ese archivo no es un respaldo válido.'); return; }

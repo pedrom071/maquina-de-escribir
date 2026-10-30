@@ -710,3 +710,25 @@ body.reading{overflow:hidden}
 .rd-hint{font-size:.72rem;color:var(--faint)}
 @media (max-width:700px){.rd-arrow{display:none}.rd-hint{display:none}.rd-top{padding:.5rem .7rem}.rd-ctl .lbl{display:none}}
 @media (prefers-reduced-motion:reduce){.rd-flow{transition:none!important}.rd-turn{display:none}}
+
+/* ---------- ajustes de la revisión general ---------- */
+.chip.zero .lb{display:none}
+.chip.zero{opacity:.75}
+.chip.zero:hover{opacity:1}
+@media (max-width:640px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+  .tile{padding:.7rem .75rem}
+  .tile .v{font-size:1.7rem}
+  .habit-tiles .tile .v{font-size:1.5rem}
+  .pcard.new{min-height:0;padding:1rem;flex-direction:row;gap:.6rem}
+  .style-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .habit-mini-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.backup-note{display:flex;gap:.9rem;align-items:center;flex-wrap:wrap;margin:0 0 1.2rem;padding:.75rem 1rem;border:1px solid var(--line2);border-radius:8px;background:var(--sheet);font-size:.875rem;line-height:1.45}
+.backup-note>div:nth-child(2){flex:1;min-width:14rem}
+.backup-note svg{width:18px;height:18px;color:var(--accent);flex:0 0 auto}
+@media (max-width:640px){.status .st-x{display:none}}
+.st-jump{display:flex;gap:.3rem;flex-wrap:wrap;position:sticky;top:calc(var(--top-h) + .4rem);z-index:5;align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.2rem}
+.st-jump button{border:0;background:none;border-radius:999px;padding:.3rem .75rem;font-size:.8rem;color:var(--soft);cursor:pointer}
+.st-jump button:hover{background:var(--accent-soft);color:var(--accent)}
+#st-resumen,#st-estilo,#st-rachas,#st-notas{scroll-margin-top:calc(var(--top-h) + 3.4rem)}

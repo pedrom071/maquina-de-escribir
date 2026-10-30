@@ -257,7 +257,7 @@ const Checker = {
         x.paras[k] = np;
       });
     }, { silent: true });
-    if (Editor.root && Editor.cid === cid) { Editor.render(true); Editor.afterChange(); }
+    if (Editor.root && Editor.cid === cid) { Editor.render(true, pids && pids.length <= 20 ? pids : null); Editor.afterChange(); }
     return { added: added, removed: removed };
   },
   schedule(cid, pid) {
@@ -270,9 +270,9 @@ const Checker = {
     }, 1400));
   },
   async chapter(cid) {
-    App.toast('Revisando sin IA…', { ms: 1500 });
+    App.toast('Revisando sin IA…', { ms: 4000, id: 'chk' });
     const r = await this.run(cid);
-    if (r) App.toast('Revisión rápida: ' + (r.added ? plural(r.added, 'marca', 'marcas') : 'sin observaciones') + (Spell.available() ? '' : ' (la ortografía se revisa en la versión web)') + '.');
+    if (r) App.toast('Revisión rápida: ' + (r.added ? plural(r.added, 'marca', 'marcas') : 'sin observaciones') + (Spell.available() ? '' : ' (la ortografía se revisa en la versión web)') + '.', { id: 'chk' });
   },
   addToDictionary(word, scope) {
     if (!word) return;

@@ -47,7 +47,7 @@ const Review = {
 
   ok() {
     if (RT.web && !AI.ready()) { AI.open(); App.toast('Configura tu IA para usar esta revisión. La revisión rápida funciona sin IA.'); return false; }
-    if (!RT.sample || this.disabled) { App.toast('La revisión con Claude no está disponible en esta vista.'); return false; }
+    if (!RT.sample || this.disabled) { App.toast('La revisión con ' + AI.name() + ' no está disponible en esta vista.'); return false; }
     if (!RT.canWrite) { App.toast('Necesitas permiso de edición para revisar.'); return false; }
     return true;
   },
@@ -114,10 +114,10 @@ const Review = {
     if (c === 'network' || (RT.web && c === 'invalid_request')) { this.queue = []; App.toast(AI.explain(e)); return; }
     if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed') {
       this.disabled = true; this.queue = [];
-      App.toast('Claude no está disponible para revisar en esta vista.'); return;
+      App.toast(AI.name(true) + ' no está disponible para revisar en esta vista.'); return;
     }
     if (c === 'rate_limited') { this.queue = []; App.toast('Muchas revisiones seguidas. Espera un momento y vuelve a intentar.'); return; }
-    if (c === 'invalid_json') { App.toast('No pude leer la respuesta de Claude. Intenta de nuevo.'); return; }
+    if (c === 'invalid_json') { App.toast('No pude leer la respuesta de ' + AI.name() + '. Intenta de nuevo.'); return; }
     if (c === 'prompt_too_large') { App.toast('El texto es demasiado largo para revisarlo de una vez.'); return; }
     App.toast('La revisión no se completó. Intenta de nuevo.');
   },

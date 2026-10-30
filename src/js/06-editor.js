@@ -63,6 +63,7 @@ const Editor = {
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
     this.ro = new ResizeObserver(() => { this.checkNarrow(); this.layoutSoon(); if (window.Pages) Pages.layoutSoon(); });
     this.ro.observe(this.writeEl);
+    this.narrow = null; // cada hoja nueva vuelve a medir su ancho (al volver al proyecto en el celular)
     this.checkNarrow();
     this.refreshHeader();
     this.render();
@@ -131,7 +132,7 @@ const Editor = {
     allMarks(this.cdoc.data).forEach(x => { if (!x.m.done) { counts[x.m.type] = (counts[x.m.type] || 0) + 1; total++; } });
     const off = new Set(App.prefs.off);
     this.chipsEl.textContent = '';
-    const chip = (k, g, l, c, on) => h('button', { class: 'chip ' + k, type: 'button', dataset: { type: k }, 'aria-pressed': on ? 'true' : 'false', title: l }, h('span', { class: 'g', text: g }), h('span', { class: 'lb', text: l }), h('span', { class: 'c', text: String(c) }));
+    const chip = (k, g, l, c, on) => h('button', { class: 'chip ' + k + (c === 0 && k !== 'all' ? ' zero' : ''), type: 'button', dataset: { type: k }, 'aria-pressed': on ? 'true' : 'false', title: l }, h('span', { class: 'g', text: g }), h('span', { class: 'lb', text: l }), h('span', { class: 'c', text: String(c) }));
     this.chipsEl.append(chip('all', '∗', 'Todo', total, off.size === 0));
     TKEYS.forEach(k => this.chipsEl.append(chip(k, TYPES[k].g, TYPES[k].l, counts[k], !off.has(k))));
   },
@@ -348,33 +349,47 @@ const Editor = {
   pIndex(pid) { return this.cdoc.data.paras.findIndex(p => p.id === pid); },
 
   /* ---------- pintar ---------- */
-  render(keepCaret) {
+  paraEl(p) {
+    const pe = document.createElement('p');
+    pe.dataset.id = p.id;
+    if (p.pb) pe.className = 'pb';
+    p.segs.forEach(s => {
+      if (s.t != null) pe.append(s.t);
+      else if (s.m) {
+        const sp = document.createElement('span');
+        sp.className = 'm ' + s.m.type + (s.m.done ? ' done' : '');
+        sp.dataset.id = s.m.id;
+        sp.textContent = s.m.text;
+        pe.append(sp);
+      }
+    });
+    if (!pe.firstChild) pe.append(document.createElement('br'));
+    return pe;
+  },
+  /* Pinta la hoja. Con «only» (ids de párrafos) repinta solo esos: en capítulos largos evita repintar todo tras cada revisión rápida. */
+  render(keepCaret, only) {
     if (!this.root || !this.cdoc || !this.cdoc.data) return;
     const d = this.cdoc.data;
     if (!d.paras || !d.paras.length) d.paras = [{ id: uid('p'), segs: [] }];
     const caret = keepCaret && document.activeElement === this.root ? this.getCaret() : null;
+    if (only && only.length && this.root.childElementCount === d.paras.length) {
+      const els = only.map(pid => [pid, this.root.querySelector('p[data-id="' + pid + '"]'), d.paras.find(p => p.id === pid)]);
+      if (els.every(([, el, p]) => el && p)) {
+        els.forEach(([, el, p]) => el.replaceWith(this.paraEl(p)));
+        this.renumber();
+        this.decorate();
+        if (caret) this.setCaret(caret);
+        this.renderNotes(); this.updateChips(); this.highlightsSoon();
+        if (window.Pages) Pages.layoutSoon();
+        App.renderStatus();
+        return;
+      }
+    }
     const frag = document.createDocumentFragment();
-    let n = 0;
-    d.paras.forEach(p => {
-      const pe = document.createElement('p');
-      pe.dataset.id = p.id;
-      if (p.pb) pe.className = 'pb';
-      p.segs.forEach(s => {
-        if (s.t != null) pe.append(s.t);
-        else if (s.m) {
-          n++;
-          const sp = document.createElement('span');
-          sp.className = 'm ' + s.m.type + (s.m.done ? ' done' : '');
-          sp.dataset.id = s.m.id; sp.dataset.n = n;
-          sp.textContent = s.m.text;
-          pe.append(sp);
-        }
-      });
-      if (!pe.firstChild) pe.append(document.createElement('br'));
-      frag.append(pe);
-    });
+    d.paras.forEach(p => frag.append(this.paraEl(p)));
     this.root.textContent = '';
     this.root.append(frag);
+    this.renumber();
     this.decorate();
     if (caret) this.setCaret(caret);
     this.renderNotes(); this.updateChips(); this.highlightsSoon();

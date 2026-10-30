@@ -58,6 +58,11 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   ok(await pg.evaluate(() => (App.allProjects().find(x => x.doc.data.title === 'Muelle').doc.data.chapters || []).length === 2), 'copiar un poema a otro proyecto');
   await pg.evaluate(() => App.go('')); await sleep(500);
   await pg.screenshot({ path: path.resolve(__dirname, '_folders.png') });
+  // aviso de respaldo cuando hay bastante texto solo en el navegador
+  await pg.evaluate(() => { App.allProjects()[0].doc.update(x => { x.stats = Object.assign({}, x.stats, { words: 2000 }); }, { now: true }); App.prefs.lastBackup = 0; App.prefs.backupSnooze = 0; App.renderHome(); }); await sleep(300);
+  ok(await pg.evaluate(() => !!document.querySelector('.backup-note')), 'aviso de respaldo en el inicio');
+  await pg.evaluate(() => Array.from(document.querySelectorAll('.backup-note .btn')).find(b => /Más tarde/.test(b.textContent)).click()); await sleep(200);
+  ok(await pg.evaluate(() => !document.querySelector('.backup-note') && App.prefs.backupSnooze > 0), '«Más tarde» lo oculta por unos días');
   ok(!errs.length, 'sin errores de página ' + errs.join(' | '));
   await b.close(); srv.kill();
   process.exit(fails ? 1 : 0);

@@ -107,7 +107,8 @@ const Collections = {
   /* Barra de carpetas del inicio. */
   folderBar(list) {
     const fs = this.folders();
-    if (!fs.length && !RT.canWrite) return null;
+    // la barra aparece cuando hay carpetas o suficientes proyectos como para ordenarlos
+    if (!fs.length && (!RT.canWrite || list.length < 3)) return null;
     const cur = App.prefs.homeFolder && fs.includes(App.prefs.homeFolder) ? App.prefs.homeFolder : null;
     const bar = h('div', { class: 'fbar', role: 'tablist', 'aria-label': 'Carpetas' });
     const chip = (label, val, n) => h('button', { type: 'button', role: 'tab', class: 'fchip' + (cur === val ? ' on' : ''), 'aria-selected': cur === val ? 'true' : 'false', onclick: () => { App.prefs.homeFolder = val; App.savePrefs(); App.renderHomeSoon(); } }, icon(val ? 'folder' : 'grid'), h('span', { text: label }), h('b', { text: String(n) }));
@@ -247,8 +248,11 @@ const Collections = {
       (P.dictionary || []).forEach(w => dict.add(w));
       (P.threads || []).forEach(t => threads.push(Object.assign({}, t, { id: uid('t') })));
     }
+    let addWords = 0;
+    for (const sid of ids) { const src = App.findProj(sid); if (src && sid !== tpid) addWords += (src.doc.data.stats && src.doc.data.stats.words) || 0; }
     f.doc.update(x => {
       this.appendEntries(x, entries);
+      x.stats = Object.assign({}, x.stats || {}, { words: ((x.stats && x.stats.words) || 0) + addWords, chapters: x.chapters.length });
       x.bible = x.bible || { sections: [] };
       bibles.forEach(s => {
         let t = x.bible.sections.find(z => (z.label || '').toLowerCase() === (s.label || '').toLowerCase());

@@ -731,6 +731,28 @@ body.reading{overflow:hidden}
 @media (max-width:700px){.rd-arrow{display:none}.rd-hint{display:none}.rd-top{padding:.5rem .7rem}.rd-ctl .lbl{display:none}}
 @media (prefers-reduced-motion:reduce){.rd-flow{transition:none!important}.rd-turn{display:none}}
 
+/* ---------- ajustes de la revisión general ---------- */
+.chip.zero .lb{display:none}
+.chip.zero{opacity:.75}
+.chip.zero:hover{opacity:1}
+@media (max-width:640px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+  .tile{padding:.7rem .75rem}
+  .tile .v{font-size:1.7rem}
+  .habit-tiles .tile .v{font-size:1.5rem}
+  .pcard.new{min-height:0;padding:1rem;flex-direction:row;gap:.6rem}
+  .style-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .habit-mini-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.backup-note{display:flex;gap:.9rem;align-items:center;flex-wrap:wrap;margin:0 0 1.2rem;padding:.75rem 1rem;border:1px solid var(--line2);border-radius:8px;background:var(--sheet);font-size:.875rem;line-height:1.45}
+.backup-note>div:nth-child(2){flex:1;min-width:14rem}
+.backup-note svg{width:18px;height:18px;color:var(--accent);flex:0 0 auto}
+@media (max-width:640px){.status .st-x{display:none}}
+.st-jump{display:flex;gap:.3rem;flex-wrap:wrap;position:sticky;top:calc(var(--top-h) + .4rem);z-index:5;align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.2rem}
+.st-jump button{border:0;background:none;border-radius:999px;padding:.3rem .75rem;font-size:.8rem;color:var(--soft);cursor:pointer}
+.st-jump button:hover{background:var(--accent-soft);color:var(--accent)}
+#st-resumen,#st-estilo,#st-rachas,#st-notas{scroll-margin-top:calc(var(--top-h) + 3.4rem)}
+
 </style>
 </head>
 <body>
@@ -739,7 +761,7 @@ body.reading{overflow:hidden}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = 'f91de7fcbd';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '052794ca60';</script>
 <script>
 (function () {
 'use strict';
@@ -1351,6 +1373,8 @@ const AI = {
   cfg() { try { return Object.assign({ provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }, JSON.parse(localStorage.getItem(AI_KEY) || '{}')); } catch (e) { return { provider: 'anthropic', key: '', model: 'claude-sonnet-5-5', base: '' }; } },
   save(c) { try { localStorage.setItem(AI_KEY, JSON.stringify(c)); } catch (e) {} },
   ready() { const c = this.cfg(); return !!(c.key || (c.provider === 'compat' && c.base)) && !!c.model; },
+  /* «Claude» en claude.ai o con clave de Anthropic; «la IA» con otros proveedores. */
+  name(cap) { const n = !RT.web || (this.ready() && this.label() === 'Claude') ? 'Claude' : 'la IA'; return cap ? n.charAt(0).toUpperCase() + n.slice(1) : n; },
   label() { const c = this.cfg(); return c.provider === 'anthropic' || /claude/.test(c.model || '') ? 'Claude' : 'IA'; },
   turns(input) {
     const list = typeof input === 'string' ? [{ role: 'user', content: input }] : input.slice();
@@ -1554,7 +1578,9 @@ const WebBackup = {
     RT.db._store.forEach((v, k) => { if (k.indexOf('projects/') === 0 || k.indexOf('data/') === 0) all[k] = v; });
     const n = Object.keys(all).filter(k => k.split('/').length === 2).length;
     await IO.save('maquina-de-escribir-respaldo-' + dayKey() + '.json', JSON.stringify({ format: 'maquina-de-escribir-todo', version: 1, exportedAt: new Date().toISOString(), docs: all }));
+    App.prefs.lastBackup = Date.now(); App.savePrefs();
     App.toast('Respaldo de ' + plural(n, 'proyecto') + ' descargado.');
+    if (App.view === 'home') App.renderHomeSoon();
   },
   async restore(file) {
     let j; try { j = JSON.parse(await file.text()); } catch (e) { App.toast('Ese archivo no es un respaldo válido.'); return; }
@@ -1736,7 +1762,8 @@ const UI = {
   toast(text, opts) {
     opts = opts || {};
     const box = $('#toast');
-    const item = h('div', null, h('span', { text: text }));
+    if (opts.id) $$('[data-tid="' + opts.id + '"]', box).forEach(x => x.remove());
+    const item = h('div', opts.id ? { dataset: { tid: opts.id } } : null, h('span', { text: text }));
     if (opts.action) item.append(h('button', { type: 'button', text: opts.action.label, onclick: () => { item.remove(); opts.action.fn(); } }));
     box.append(item);
     while (box.children.length > 3) box.firstChild.remove();
@@ -2069,6 +2096,16 @@ const App = {
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
     if (!mine.length && this.colls.mine && RT.canWrite) wrap.append(this.onboarding());
+    if (RT.web && RT.canWrite) {
+      const words = mine.concat(team).reduce((n, x) => n + ((x.doc.data.stats && x.doc.data.stats.words) || 0), 0);
+      const last = this.prefs.lastBackup || 0, days = Math.floor((Date.now() - last) / 864e5);
+      if (words >= 1500 && days >= 14 && !(this.prefs.backupSnooze && Date.now() - this.prefs.backupSnooze < 3 * 864e5)) {
+        const note = h('div', { class: 'backup-note', role: 'note' }, icon('book'),
+          h('div', null, h('b', { text: last ? 'Hace ' + plural(days, 'día') + ' que no respaldas.' : 'Todavía no tienes un respaldo.' }), ' Tus ' + fmtN(words) + ' palabras viven solo en este navegador; un respaldo te deja recuperarlas o llevarlas a otro computador.'),
+          h('div', { class: 'row' }, btn('Descargar respaldo', () => WebBackup.download(), 'small primary'), btn('Más tarde', () => { this.prefs.backupSnooze = Date.now(); this.savePrefs(); note.remove(); }, 'small ghost')));
+        wrap.insertBefore(note, wrap.children[1] || null);
+      }
+    }
     if (window.Habit) { const hp = Habit.projects(); if (hp.length) wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Tu escritura' }), h('span', { class: 'muted', text: 'Todos tus proyectos juntos' + (hp.some(x => x.shared) ? '; en los compartidos, solo lo que escribiste tú' : '') + '.' })), Habit.panel(hp, { byProject: true, title: 'Rachas y ritmo', who: Habit.me() })); }
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
@@ -2447,9 +2484,9 @@ const App = {
       if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + keys('mod', 'K') + ')', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
     }
     if (P) {
-      s.append(h('span', null, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
+      s.append(h('span', { class: 'st-x' }, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
       const t = App.wordsToday();
-      s.append(h('span', null, 'Hoy: ', h('b', { text: (t >= 0 ? '+' : '') + fmtN(t) })));
+      s.append(h('span', { class: 'st-x' }, 'Hoy: ', h('b', { text: (t >= 0 ? '+' : '') + fmtN(t) })));
     }
     s.append(h('span', { class: 'grow' }));
     if (window.Review && Review.statusText()) s.append(h('span', { class: 'rv', text: Review.statusText() }));
@@ -2558,7 +2595,7 @@ const App = {
     dens.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.density = dens.value; }, { now: true }));
     wrap.append(h('div', { class: 'panel' }, h('h3', { text: 'Revisor' }),
       h('label', { class: 'field' }, h('span', { text: 'Instrucciones para el revisor' }), guide,
-        h('span', { class: 'muted', style: 'font-size:.75rem', text: 'Claude las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
+        h('span', { class: 'muted', style: 'font-size:.75rem', text: AI.name(true) + ' las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
       h('div', { class: 'field' }, h('span', { text: 'Qué marca' }), checks),
       h('label', { class: 'field' }, h('span', { text: 'Cantidad de marcas' }), dens),
       (() => { const c = h('input', { type: 'checkbox', checked: rv.integrate !== false, disabled: ro }); c.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.integrate = c.checked; }, { now: true })); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: 'La IA confirma, corrige o descarta lo que marca la revisión automática (una sola lista, sin duplicados)' })); })(),
@@ -2607,7 +2644,7 @@ const App = {
       [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
-      ['Seleccionar texto', 'Marcar a mano o llevar al chat con Claude'],
+      ['Seleccionar texto', RT.web ? 'Marcar a mano' : 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']
     ];
@@ -2616,7 +2653,7 @@ const App = {
     UI.modal({
       title: 'Atajos y ayuda',
       body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keysEl,
-        h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas de Claude se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
+        h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas automáticas y las de ' + AI.name() + ' se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
       buttons: [{ label: 'Listo', cls: 'primary' }]
     });
   }
@@ -2688,6 +2725,7 @@ const Editor = {
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
     this.ro = new ResizeObserver(() => { this.checkNarrow(); this.layoutSoon(); if (window.Pages) Pages.layoutSoon(); });
     this.ro.observe(this.writeEl);
+    this.narrow = null; // cada hoja nueva vuelve a medir su ancho (al volver al proyecto en el celular)
     this.checkNarrow();
     this.refreshHeader();
     this.render();
@@ -2756,7 +2794,7 @@ const Editor = {
     allMarks(this.cdoc.data).forEach(x => { if (!x.m.done) { counts[x.m.type] = (counts[x.m.type] || 0) + 1; total++; } });
     const off = new Set(App.prefs.off);
     this.chipsEl.textContent = '';
-    const chip = (k, g, l, c, on) => h('button', { class: 'chip ' + k, type: 'button', dataset: { type: k }, 'aria-pressed': on ? 'true' : 'false', title: l }, h('span', { class: 'g', text: g }), h('span', { class: 'lb', text: l }), h('span', { class: 'c', text: String(c) }));
+    const chip = (k, g, l, c, on) => h('button', { class: 'chip ' + k + (c === 0 && k !== 'all' ? ' zero' : ''), type: 'button', dataset: { type: k }, 'aria-pressed': on ? 'true' : 'false', title: l }, h('span', { class: 'g', text: g }), h('span', { class: 'lb', text: l }), h('span', { class: 'c', text: String(c) }));
     this.chipsEl.append(chip('all', '∗', 'Todo', total, off.size === 0));
     TKEYS.forEach(k => this.chipsEl.append(chip(k, TYPES[k].g, TYPES[k].l, counts[k], !off.has(k))));
   },
@@ -2973,33 +3011,47 @@ const Editor = {
   pIndex(pid) { return this.cdoc.data.paras.findIndex(p => p.id === pid); },
 
   /* ---------- pintar ---------- */
-  render(keepCaret) {
+  paraEl(p) {
+    const pe = document.createElement('p');
+    pe.dataset.id = p.id;
+    if (p.pb) pe.className = 'pb';
+    p.segs.forEach(s => {
+      if (s.t != null) pe.append(s.t);
+      else if (s.m) {
+        const sp = document.createElement('span');
+        sp.className = 'm ' + s.m.type + (s.m.done ? ' done' : '');
+        sp.dataset.id = s.m.id;
+        sp.textContent = s.m.text;
+        pe.append(sp);
+      }
+    });
+    if (!pe.firstChild) pe.append(document.createElement('br'));
+    return pe;
+  },
+  /* Pinta la hoja. Con «only» (ids de párrafos) repinta solo esos: en capítulos largos evita repintar todo tras cada revisión rápida. */
+  render(keepCaret, only) {
     if (!this.root || !this.cdoc || !this.cdoc.data) return;
     const d = this.cdoc.data;
     if (!d.paras || !d.paras.length) d.paras = [{ id: uid('p'), segs: [] }];
     const caret = keepCaret && document.activeElement === this.root ? this.getCaret() : null;
+    if (only && only.length && this.root.childElementCount === d.paras.length) {
+      const els = only.map(pid => [pid, this.root.querySelector('p[data-id="' + pid + '"]'), d.paras.find(p => p.id === pid)]);
+      if (els.every(([, el, p]) => el && p)) {
+        els.forEach(([, el, p]) => el.replaceWith(this.paraEl(p)));
+        this.renumber();
+        this.decorate();
+        if (caret) this.setCaret(caret);
+        this.renderNotes(); this.updateChips(); this.highlightsSoon();
+        if (window.Pages) Pages.layoutSoon();
+        App.renderStatus();
+        return;
+      }
+    }
     const frag = document.createDocumentFragment();
-    let n = 0;
-    d.paras.forEach(p => {
-      const pe = document.createElement('p');
-      pe.dataset.id = p.id;
-      if (p.pb) pe.className = 'pb';
-      p.segs.forEach(s => {
-        if (s.t != null) pe.append(s.t);
-        else if (s.m) {
-          n++;
-          const sp = document.createElement('span');
-          sp.className = 'm ' + s.m.type + (s.m.done ? ' done' : '');
-          sp.dataset.id = s.m.id; sp.dataset.n = n;
-          sp.textContent = s.m.text;
-          pe.append(sp);
-        }
-      });
-      if (!pe.firstChild) pe.append(document.createElement('br'));
-      frag.append(pe);
-    });
+    d.paras.forEach(p => frag.append(this.paraEl(p)));
     this.root.textContent = '';
     this.root.append(frag);
+    this.renumber();
     this.decorate();
     if (caret) this.setCaret(caret);
     this.renderNotes(); this.updateChips(); this.highlightsSoon();
@@ -3583,7 +3635,7 @@ const Review = {
 
   ok() {
     if (RT.web && !AI.ready()) { AI.open(); App.toast('Configura tu IA para usar esta revisión. La revisión rápida funciona sin IA.'); return false; }
-    if (!RT.sample || this.disabled) { App.toast('La revisión con Claude no está disponible en esta vista.'); return false; }
+    if (!RT.sample || this.disabled) { App.toast('La revisión con ' + AI.name() + ' no está disponible en esta vista.'); return false; }
     if (!RT.canWrite) { App.toast('Necesitas permiso de edición para revisar.'); return false; }
     return true;
   },
@@ -3650,10 +3702,10 @@ const Review = {
     if (c === 'network' || (RT.web && c === 'invalid_request')) { this.queue = []; App.toast(AI.explain(e)); return; }
     if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed') {
       this.disabled = true; this.queue = [];
-      App.toast('Claude no está disponible para revisar en esta vista.'); return;
+      App.toast(AI.name(true) + ' no está disponible para revisar en esta vista.'); return;
     }
     if (c === 'rate_limited') { this.queue = []; App.toast('Muchas revisiones seguidas. Espera un momento y vuelve a intentar.'); return; }
-    if (c === 'invalid_json') { App.toast('No pude leer la respuesta de Claude. Intenta de nuevo.'); return; }
+    if (c === 'invalid_json') { App.toast('No pude leer la respuesta de ' + AI.name() + '. Intenta de nuevo.'); return; }
     if (c === 'prompt_too_large') { App.toast('El texto es demasiado largo para revisarlo de una vez.'); return; }
     App.toast('La revisión no se completó. Intenta de nuevo.');
   },
@@ -4410,8 +4462,11 @@ const Stats = {
     });
     const wrap = h('div', { class: 'st' });
     wrap.append(h('div', { class: 'vhead', style: 'margin:0' }, h('div', null, h('h2', { text: 'Estadísticas' }), h('p', { text: 'Avance, ritmo de escritura y señales del texto. Toca una palabra o una frase para ir a ella.' }))));
+    const jump = h('nav', { class: 'st-jump', 'aria-label': 'Secciones' });
+    [['Resumen', 'st-resumen'], ['Estilo', 'st-estilo'], ['Rachas', 'st-rachas'], ['Notas', 'st-notas']].forEach(([l, id]) => jump.append(h('button', { type: 'button', onclick: () => { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, l)));
+    wrap.append(jump);
     const today = App.wordsToday();
-    const tiles = h('div', { class: 'tiles' });
+    const tiles = h('div', { class: 'tiles', id: 'st-resumen' });
     const tile = (v, k) => tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: v }), h('div', { class: 'k', text: k })));
     tile(fmtN(total), 'palabras');
     tile((today >= 0 ? '+' : '') + fmtN(today), 'hoy');
@@ -4455,22 +4510,22 @@ const Stats = {
 
     const two2 = h('div', { class: 'two' });
     let top = Array.from(freq.values()).sort((a, b) => b.n - a.n);
-    if (top.filter(t => t.n > 1).length >= 12) top = top.filter(t => t.n > 1);
+    top = top.filter(t => t.n > 1);
     top = top.slice(0, 36);
     const cloud = h('div', { class: 'wcloud' });
     top.forEach(t => cloud.append(h('button', { type: 'button', onclick: () => Search.open(t.w, true) }, t.w, h('b', { text: String(t.n) }))));
-    two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Palabras que más usas' }), top.length ? cloud : h('p', { class: 'muted', text: 'Escribe un poco más para ver tus palabras frecuentes.' })));
+    two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Palabras que más usas' }), top.length ? cloud : h('p', { class: 'muted', text: 'Todavía no hay palabras que se repitan. Aparecerán aquí a medida que escribas.' })));
     const lp = h('div', { class: 'longs' });
     longs.sort((a, b) => b.n - a.n).slice(0, 8).forEach(l => lp.append(h('button', { type: 'button', onclick: () => { App.go(App.chHash(l.cid)); setTimeout(() => Search.open(l.s.slice(0, 60)), 150); } }, l.s.length > 220 ? l.s.slice(0, 220) + '…' : l.s, h('span', { text: l.n + ' palabras · ' + App.unit().toLowerCase() + ' ' + l.ch }))));
     two2.append(h('div', { class: 'panel' }, h('h3', { text: 'Frases más largas' }), longs.length ? lp : h('p', { class: 'muted', text: 'No hay frases de más de 40 palabras.' })));
     wrap.append(two2);
 
-    const nt = h('div', { class: 'panel' }, h('h3', { text: 'Notas del corrector' }));
+    const nt = h('div', { class: 'panel', id: 'st-notas' }, h('h3', { text: 'Notas del corrector' }));
     const rows = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem' });
     TKEYS.forEach(k => rows.append(h('span', { class: 'chip ' + k, style: 'cursor:default' }, h('span', { class: 'g', text: TYPES[k].g }), h('span', { text: TYPES[k].l }), h('span', { class: 'c', text: byType[k].open + ' abiertas · ' + byType[k].done + ' resueltas' }))));
     nt.append(rows);
     if (window.Style) Style.render(wrap);
-    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }));
+    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Object.assign(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }), { id: 'st-rachas' }));
     wrap.append(nt);
     st.append(wrap);
   }
@@ -5771,7 +5826,7 @@ const Checker = {
         x.paras[k] = np;
       });
     }, { silent: true });
-    if (Editor.root && Editor.cid === cid) { Editor.render(true); Editor.afterChange(); }
+    if (Editor.root && Editor.cid === cid) { Editor.render(true, pids && pids.length <= 20 ? pids : null); Editor.afterChange(); }
     return { added: added, removed: removed };
   },
   schedule(cid, pid) {
@@ -5784,9 +5839,9 @@ const Checker = {
     }, 1400));
   },
   async chapter(cid) {
-    App.toast('Revisando sin IA…', { ms: 1500 });
+    App.toast('Revisando sin IA…', { ms: 4000, id: 'chk' });
     const r = await this.run(cid);
-    if (r) App.toast('Revisión rápida: ' + (r.added ? plural(r.added, 'marca', 'marcas') : 'sin observaciones') + (Spell.available() ? '' : ' (la ortografía se revisa en la versión web)') + '.');
+    if (r) App.toast('Revisión rápida: ' + (r.added ? plural(r.added, 'marca', 'marcas') : 'sin observaciones') + (Spell.available() ? '' : ' (la ortografía se revisa en la versión web)') + '.', { id: 'chk' });
   },
   addToDictionary(word, scope) {
     if (!word) return;
@@ -6027,10 +6082,11 @@ const Style = {
       const ws = t.match(/[\p{L}]+/gu) || [];
       ws.forEach(w => {
         const lw = w.toLowerCase();
-        r.words++; r.syl += syllables(w); toks.push(lw);
+        const sy = syllables(w);
+        r.words++; r.syl += sy; toks.push(lw);
         if (w.length >= 7 && lw.endsWith('mente')) r.mente++;
         if (/(?:ando|iendo|yendo)$/.test(lw) && lw.length >= 5 && !NOT_GERUND.has(lw)) r.gerund++;
-        if (syllables(w) >= 4) r.longWords++;
+        if (sy >= 4) r.longWords++;
       });
       const pas = t.match(/(?<![\p{L}])(?:fue|fueron|ha sido|han sido|había sido|habían sido|será|serán)\s+[\p{L}]+(?:ado|ada|ados|adas|ido|ida|idos|idas|cho|cha|chos|chas|to|ta|tos|tas)(?![\p{L}])/giu);
       if (pas) r.passive += pas.length;
@@ -6087,7 +6143,7 @@ const Style = {
     const P = App.P(); if (!P) return;
     const chs = App.chapterList().map((c, i) => { const d = App.ch(c.id); return { c: c, i: i, texts: d && d.data ? d.data.paras.map(parText) : [] }; });
     const all = this.compute(chs.reduce((a, x) => a.concat(x.texts), []));
-    const panel = h('div', { class: 'panel style-panel' });
+    const panel = h('div', { class: 'panel style-panel', id: 'st-estilo' });
     panel.append(h('h3', { text: 'Retrato del estilo' }), h('p', { class: 'muted', style: 'margin:-.4rem 0 .9rem;font-size:.8125rem', text: 'Medidas descriptivas, no reglas: sirven para ver tu voz y comparar ' + kindOf(P).units.toLowerCase() + ' entre sí.' }));
     if (all.words < 60) { panel.append(h('p', { class: 'muted', text: 'Escribe un poco más (unas 60 palabras) para ver el retrato.' })); wrap.append(panel); return; }
     panel.append(this.guide(all));
@@ -7132,7 +7188,8 @@ const Collections = {
   /* Barra de carpetas del inicio. */
   folderBar(list) {
     const fs = this.folders();
-    if (!fs.length && !RT.canWrite) return null;
+    // la barra aparece cuando hay carpetas o suficientes proyectos como para ordenarlos
+    if (!fs.length && (!RT.canWrite || list.length < 3)) return null;
     const cur = App.prefs.homeFolder && fs.includes(App.prefs.homeFolder) ? App.prefs.homeFolder : null;
     const bar = h('div', { class: 'fbar', role: 'tablist', 'aria-label': 'Carpetas' });
     const chip = (label, val, n) => h('button', { type: 'button', role: 'tab', class: 'fchip' + (cur === val ? ' on' : ''), 'aria-selected': cur === val ? 'true' : 'false', onclick: () => { App.prefs.homeFolder = val; App.savePrefs(); App.renderHomeSoon(); } }, icon(val ? 'folder' : 'grid'), h('span', { text: label }), h('b', { text: String(n) }));
@@ -7272,8 +7329,11 @@ const Collections = {
       (P.dictionary || []).forEach(w => dict.add(w));
       (P.threads || []).forEach(t => threads.push(Object.assign({}, t, { id: uid('t') })));
     }
+    let addWords = 0;
+    for (const sid of ids) { const src = App.findProj(sid); if (src && sid !== tpid) addWords += (src.doc.data.stats && src.doc.data.stats.words) || 0; }
     f.doc.update(x => {
       this.appendEntries(x, entries);
+      x.stats = Object.assign({}, x.stats || {}, { words: ((x.stats && x.stats.words) || 0) + addWords, chapters: x.chapters.length });
       x.bible = x.bible || { sections: [] };
       bibles.forEach(s => {
         let t = x.bible.sections.find(z => (z.label || '').toLowerCase() === (s.label || '').toLowerCase());

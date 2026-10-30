@@ -187,6 +187,16 @@ const App = {
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
     if (!mine.length && this.colls.mine && RT.canWrite) wrap.append(this.onboarding());
+    if (RT.web && RT.canWrite) {
+      const words = mine.concat(team).reduce((n, x) => n + ((x.doc.data.stats && x.doc.data.stats.words) || 0), 0);
+      const last = this.prefs.lastBackup || 0, days = Math.floor((Date.now() - last) / 864e5);
+      if (words >= 1500 && days >= 14 && !(this.prefs.backupSnooze && Date.now() - this.prefs.backupSnooze < 3 * 864e5)) {
+        const note = h('div', { class: 'backup-note', role: 'note' }, icon('book'),
+          h('div', null, h('b', { text: last ? 'Hace ' + plural(days, 'día') + ' que no respaldas.' : 'Todavía no tienes un respaldo.' }), ' Tus ' + fmtN(words) + ' palabras viven solo en este navegador; un respaldo te deja recuperarlas o llevarlas a otro computador.'),
+          h('div', { class: 'row' }, btn('Descargar respaldo', () => WebBackup.download(), 'small primary'), btn('Más tarde', () => { this.prefs.backupSnooze = Date.now(); this.savePrefs(); note.remove(); }, 'small ghost')));
+        wrap.insertBefore(note, wrap.children[1] || null);
+      }
+    }
     if (window.Habit) { const hp = Habit.projects(); if (hp.length) wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Tu escritura' }), h('span', { class: 'muted', text: 'Todos tus proyectos juntos' + (hp.some(x => x.shared) ? '; en los compartidos, solo lo que escribiste tú' : '') + '.' })), Habit.panel(hp, { byProject: true, title: 'Rachas y ritmo', who: Habit.me() })); }
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
@@ -565,9 +575,9 @@ const App = {
       if (window.Pages && Pages.pages.length) s.append(h('button', { type: 'button', class: 'st-page', title: 'Ir a una página (' + keys('mod', 'K') + ')', onclick: () => Pages.palette() }, 'Pág. ', h('b', { text: Pages.cur + ' de ' + Pages.pages.length })));
     }
     if (P) {
-      s.append(h('span', null, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
+      s.append(h('span', { class: 'st-x' }, 'Proyecto: ', h('b', { text: fmtN((P.stats && P.stats.words) || 0) })));
       const t = App.wordsToday();
-      s.append(h('span', null, 'Hoy: ', h('b', { text: (t >= 0 ? '+' : '') + fmtN(t) })));
+      s.append(h('span', { class: 'st-x' }, 'Hoy: ', h('b', { text: (t >= 0 ? '+' : '') + fmtN(t) })));
     }
     s.append(h('span', { class: 'grow' }));
     if (window.Review && Review.statusText()) s.append(h('span', { class: 'rv', text: Review.statusText() }));
@@ -676,7 +686,7 @@ const App = {
     dens.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.density = dens.value; }, { now: true }));
     wrap.append(h('div', { class: 'panel' }, h('h3', { text: 'Revisor' }),
       h('label', { class: 'field' }, h('span', { text: 'Instrucciones para el revisor' }), guide,
-        h('span', { class: 'muted', style: 'font-size:.75rem', text: 'Claude las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
+        h('span', { class: 'muted', style: 'font-size:.75rem', text: AI.name(true) + ' las lee en cada revisión. Escribe qué te importa y qué no debe tocar.' })),
       h('div', { class: 'field' }, h('span', { text: 'Qué marca' }), checks),
       h('label', { class: 'field' }, h('span', { text: 'Cantidad de marcas' }), dens),
       (() => { const c = h('input', { type: 'checkbox', checked: rv.integrate !== false, disabled: ro }); c.addEventListener('change', () => pd.update(x => { x.review = x.review || {}; x.review.integrate = c.checked; }, { now: true })); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: 'La IA confirma, corrige o descarta lo que marca la revisión automática (una sola lista, sin duplicados)' })); })(),
@@ -725,7 +735,7 @@ const App = {
       [keys('mod', 'shift', 'L'), 'Leer como libro, a una o dos páginas'],
       [keys('alt', '-'), 'Diálogo: abre una línea con raya (—)'],
       [keys('alt', 'I'), 'Diálogo: abre o cierra el inciso del narrador'],
-      ['Seleccionar texto', 'Marcar a mano o llevar al chat con Claude'],
+      ['Seleccionar texto', RT.web ? 'Marcar a mano' : 'Marcar a mano o llevar al chat con Claude'],
       ['Esc', 'Cerrar paneles o salir del modo foco'],
       ['?', 'Esta ayuda']
     ];
@@ -734,7 +744,7 @@ const App = {
     UI.modal({
       title: 'Atajos y ayuda',
       body: h('div', { style: 'display:flex;flex-direction:column;gap:1rem' }, keysEl,
-        h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas de Claude se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
+        h('p', { class: 'muted', style: 'margin:0;font-size:.8438rem', text: 'Todo se guarda solo. Las marcas automáticas y las de ' + AI.name() + ' se renuevan cada vez que revisa un párrafo; las tuyas, las resueltas, las que respondiste y las ligadas a un cabo suelto se conservan.' })),
       buttons: [{ label: 'Listo', cls: 'primary' }]
     });
   }
