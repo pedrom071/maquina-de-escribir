@@ -49,9 +49,9 @@ const Checker = {
   on(P, rule) {
     const lv = this.level(P);
     const types = (P && P.review && P.review.types) || TKEYS;
-    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh' }[rule];
+    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh', age: 'coh', dead: 'coh', noficha: 'coh', dur: 'coh', date: 'coh' }[rule];
     if (!types.includes(t)) return false;
-    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name'].includes(rule);
+    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name', 'age', 'dead', 'date'].includes(rule);
     if (lv === 'normal') return !['mul', 'mente', 'gerund'].includes(rule);
     return true;
   },
@@ -175,6 +175,8 @@ const Checker = {
       });
       COMODINES.forEach(cw => { const re2 = new RegExp('(?<![\\p{L}])' + cw + '(?![\\p{L}])', 'giu'); const ms = text.match(re2); if (ms && ms.length >= 3) { const k = text.search(re2); add('rec', 'eco', text.substr(k, cw.length), '«' + cw + '» aparece ' + ms.length + ' veces en este párrafo.'); } });
     }
+    // coherencia con la biblia y dentro del capítulo (16-coherence.js)
+    if (window.Coherence) Coherence.check(P, paras, i, text, add, r => this.on(P, r));
     // nombres parecidos a los de la biblia y ortografía
     const names = this.bibleNames(P);
     const nameSet = new Set(); names.forEach(n => n.split(/\s+/).forEach(w => nameSet.add(w)));

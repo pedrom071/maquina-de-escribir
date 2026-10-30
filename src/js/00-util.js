@@ -100,7 +100,7 @@ const KINDS = {
   novela: {
     label: 'Novela', unit: 'Capítulo', units: 'Capítulos', timeline: true,
     sections: [
-      { label: 'Personajes', fields: ['Rol', 'Edad', 'Rasgos', 'También llamado'], graph: true },
+      { label: 'Personajes', fields: ['Rol', 'Edad', 'Estado', 'Rasgos', 'También llamado'], graph: true },
       { label: 'Lugares', fields: ['Descripción'], graph: false },
       { label: 'Mundo y reglas', fields: [] },
       { label: 'Glosario', fields: [] }
@@ -110,7 +110,7 @@ const KINDS = {
   cuento: {
     label: 'Cuento', unit: 'Parte', units: 'Partes', timeline: true,
     sections: [
-      { label: 'Personajes', fields: ['Rol', 'Rasgos'], graph: true },
+      { label: 'Personajes', fields: ['Rol', 'Edad', 'Estado', 'Rasgos'], graph: true },
       { label: 'Lugares', fields: ['Descripción'] },
       { label: 'Motivos', fields: [] }
     ],

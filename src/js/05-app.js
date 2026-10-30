@@ -176,6 +176,7 @@ const App = {
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
     if (!mine.length && this.colls.mine && RT.canWrite) wrap.append(this.onboarding());
+    if (window.Habit) { const hp = Habit.projects(); if (hp.length) wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Tu escritura' }), h('span', { class: 'muted', text: 'Todos tus proyectos juntos' + (hp.some(x => x.shared) ? '; en los compartidos, solo lo que escribiste tú' : '') + '.' })), Habit.panel(hp, { byProject: true, title: 'Rachas y ritmo', who: Habit.me() })); }
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
       const tg = h('div', { class: 'pgrid' });
@@ -399,13 +400,21 @@ const App = {
     pd.update(x => {
       x.stats = { words: words, chapters: x.chapters.length, peek: peek };
       x.days = x.days || {};
+      let before;
       if (!x.days[k]) {
         const prevKeys = Object.keys(x.days).sort();
         const prev = prevKeys.length ? x.days[prevKeys[prevKeys.length - 1]].e : (st.words != null ? st.words : words);
-        x.days[k] = { s: prev, e: words };
-      } else x.days[k].e = words;
+        x.days[k] = { s: prev, e: words }; before = prev;
+      } else { before = x.days[k].e; x.days[k].e = words; }
+      // a qué hora escribes (palabras agregadas por hora del día)
+      const added = words - before;
+      if (added > 0 && added < 5000) { const hr = String(new Date().getHours()); x.days[k].h = x.days[k].h || {}; x.days[k].h[hr] = (x.days[k].h[hr] || 0) + added; }
+      // quién escribió (para ver tu propio avance en proyectos compartidos)
+      if (added) { const me = RT.me || 'local'; x.days[k].by = x.days[k].by || {}; x.days[k].by[me] = (x.days[k].by[me] || 0) + added; }
+      // se guardan unos dos años de registro; el detalle por hora, cuatro meses
       const keys = Object.keys(x.days).sort();
-      while (keys.length > 120) delete x.days[keys.shift()];
+      while (keys.length > 730) delete x.days[keys.shift()];
+      keys.slice(0, Math.max(0, keys.length - 120)).forEach(z => { if (x.days[z].h) delete x.days[z].h; });
     }, { silent: true });
     this.renderStatus();
   },

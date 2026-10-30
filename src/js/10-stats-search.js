@@ -61,8 +61,8 @@ const Stats = {
       if (i % 7 === 2 || i === 29) svg.append(sv('text', { x: i === 29 ? W - 2 : i * bw + bw / 2, y: H + 16, 'text-anchor': i === 29 ? 'end' : 'middle' }, i === 29 ? 'hoy' : d.d.getDate() + ' ' + MESES[d.d.getMonth()]));
     });
     days.append(svg);
-    const streak = (() => { let s = 0; for (let i = ds.length - 1; i >= 0; i--) { if (ds[i].v > 0) s++; else if (i === ds.length - 1) continue; else break; } return s; })();
-    days.append(h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: streak ? 'Llevas ' + plural(streak, 'día seguido', 'días seguidos') + ' escribiendo.' : 'Se cuenta lo que escribes cada día en este proyecto.' }));
+    const hs = Habit.streaks(Habit.merge([{ days: P.days }]));
+    days.append(h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: hs.cur ? 'Llevas ' + plural(hs.cur, 'día seguido', 'días seguidos') + ' escribiendo en este proyecto' + (hs.best > hs.cur ? ' (tu mejor racha: ' + plural(hs.best, 'día') + ')' : '') + '.' : 'Se cuenta lo que escribes cada día en este proyecto.' }));
     two.append(days);
     wrap.append(two);
 
@@ -82,6 +82,8 @@ const Stats = {
     const rows = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem' });
     TKEYS.forEach(k => rows.append(h('span', { class: 'chip ' + k, style: 'cursor:default' }, h('span', { class: 'g', text: TYPES[k].g }), h('span', { text: TYPES[k].l }), h('span', { class: 'c', text: byType[k].open + ' abiertas · ' + byType[k].done + ' resueltas' }))));
     nt.append(rows);
+    if (window.Style) Style.render(wrap);
+    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }));
     wrap.append(nt);
     st.append(wrap);
   }

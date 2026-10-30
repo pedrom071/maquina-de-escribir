@@ -187,6 +187,7 @@ const Profile = {
       who.append(h('div', null, h('b', { text: this.me.name || 'Tu cuenta' }), h('div', { class: 'muted', style: 'font-size:.8rem', text: App.colls.team ? 'Tus proyectos privados solo los ves tú. Esta apariencia se guarda en tu perfil y te sigue en cualquier dispositivo.' : 'Esta apariencia se guarda en este navegador.' })));
     } else who.append(h('div', { class: 'muted', style: 'font-size:.85rem', text: RT.web ? 'Todo se guarda en este navegador: tus proyectos, tu apariencia y tu clave de IA.' : RT.local ? 'Modo local: tu apariencia se guarda en este navegador.' : 'Tu apariencia se guarda en tu perfil.' }));
     body.append(who);
+    if (window.Habit) body.append(h('section', { class: 'lk' }, h('h4', { text: 'Tu escritura' }), Habit.mini()));
 
     const presets = h('div', { class: 'presets' });
     Object.keys(PRESETS).forEach(k => {

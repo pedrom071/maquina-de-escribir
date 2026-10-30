@@ -661,6 +661,7 @@ const Editor = {
       if (m.fix && m.fix.to && !m.fix.applied) acts.append(this.act('Aplicar', 'apply', m.id, 'primary'));
       if (m.fix && m.fix.applied) acts.append(this.act('Deshacer cambio', 'unapply', m.id));
       if (m.by === 'revisor' && m.rule === 'spell' && m.word) acts.append(this.act('Al diccionario', 'dict', m.id));
+      if (m.by === 'revisor' && m.rule === 'noficha' && m.word) acts.append(this.act('Crear ficha', 'ficha', m.id, 'primary'), this.act('No es personaje', 'noficha', m.id));
       acts.append(this.act(m.done ? 'Reabrir' : 'Resuelta', 'done', m.id));
       acts.append(this.act('Responder', 'reply', m.id));
       acts.append(this.act('Editar', 'edit', m.id));
@@ -795,6 +796,7 @@ const Editor = {
   },
   noteAction(a, id) {
     if (a === 'close') { this.setActive(null); return; }
+    if (a === 'ficha' || a === 'noficha') { const fm = findMark(this.cdoc.data, id); if (fm) a === 'ficha' ? Coherence.addCard(fm.m.word) : Coherence.ignore(fm.m.word); return; }
     if (a === 'dict') { const fm = findMark(this.cdoc.data, id); if (fm) Checker.addToDictionary(fm.m.word, /^\p{Lu}/u.test(fm.m.word) ? 'project' : 'user'); return; }
     const f = findMark(this.cdoc.data, id); if (!f) return;
     const m = f.m;

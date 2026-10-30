@@ -513,6 +513,48 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 .ai-status[data-k="bad"]{color:var(--bad)}
 .ai-adv summary{cursor:pointer;font-size:.85rem;color:var(--soft)}
 
+/* ---------- retrato del estilo ---------- */
+.style-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:.6rem}
+.style-cell{border:1px solid var(--line);border-radius:4px;padding:.7rem .8rem;background:var(--bg);cursor:default}
+.style-cell .k{font:500 .6562rem/1.3 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.style-cell .v{font:400 1.75rem/1.1 var(--f-display);font-variant-numeric:tabular-nums;margin-top:.3rem}
+.style-cell .s{font-size:.75rem;color:var(--soft);margin-top:.2rem}
+.style-panel h4,.habit h4{font:500 .7188rem/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin:0 0 .55rem}
+.style-hist{display:flex;flex-direction:column;gap:.4rem}
+.style-hist .row,.style-hist-row{margin-bottom:.35rem}
+.style-hist .lbl,.style-hist-row .lbl{flex:0 0 5.2rem;font-size:.8125rem}
+.style-hist .bar,.style-hist-row .bar{flex:1;height:10px;border-radius:2px;background:var(--sunk);overflow:hidden;min-width:0}
+.style-hist .bar>span,.style-hist-row .bar>span{display:block;height:100%;background:var(--accent)}
+.style-hist .n,.style-hist-row .n{flex:0 0 4.2rem;text-align:right;font:400 .7188rem var(--f-mono);color:var(--soft);font-variant-numeric:tabular-nums}
+.style-table{width:100%;border-collapse:collapse;font-size:.8438rem;font-variant-numeric:tabular-nums}
+.style-table th{text-align:left;font:500 .6562rem/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);padding:.35rem .5rem;border-bottom:1px solid var(--line)}
+.style-table td{padding:.4rem .5rem;border-bottom:1px solid var(--line);white-space:nowrap}
+.style-table td:first-child{white-space:normal;min-width:8rem}
+.style-table tbody tr:hover{background:var(--accent-soft)}
+.style-table td.off{font-style:italic;color:var(--accent);font-weight:600}
+
+/* ---------- rachas ---------- */
+.habit{display:flex;flex-direction:column}
+.habit-nudge{margin:0 0 .8rem;font:400 1.05rem/1.4 var(--f-display)}
+.habit-tiles .tile.on .v{color:var(--accent)}
+.habit-tiles .tile .v{font-size:1.9rem}
+.heat-wrap{margin-top:1rem;overflow-x:auto}
+.heat text{font:400 9px var(--f-mono);fill:var(--soft)}
+.heat rect.h0,.heat-legend i.h0{fill:var(--sunk);background:var(--sunk)}
+.heat rect.h1,.heat-legend i.h1{fill:color-mix(in srgb,var(--accent) 30%,var(--sunk));background:color-mix(in srgb,var(--accent) 30%,var(--sunk))}
+.heat rect.h2,.heat-legend i.h2{fill:color-mix(in srgb,var(--accent) 55%,var(--sunk));background:color-mix(in srgb,var(--accent) 55%,var(--sunk))}
+.heat rect.h3,.heat-legend i.h3{fill:color-mix(in srgb,var(--accent) 78%,var(--sunk));background:color-mix(in srgb,var(--accent) 78%,var(--sunk))}
+.heat rect.h4,.heat-legend i.h4{fill:var(--accent);background:var(--accent)}
+.heat rect.today{stroke:var(--ink);stroke-width:1.2}
+.heat-legend{display:flex;align-items:center;gap:3px;margin-top:.4rem;font:400 .6875rem var(--f-mono);color:var(--soft)}
+.heat-legend i{display:inline-block;width:11px;height:11px;border-radius:2px}
+.heat-legend span{margin:0 .3rem}
+.habit-mini-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem}
+.habit-mini-row>div{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:4px;padding:.5rem .6rem;background:var(--bg)}
+.habit-mini-row b{font:400 1.45rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.habit-mini-row span{font:500 .6rem/1.3 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin-top:.2rem}
+.habit-mini .btn{margin-top:.6rem}
+
 </style>
 </head>
 <body>
@@ -521,7 +563,7 @@ svg.chart text{fill:var(--soft);font:400 .6875rem var(--f-mono)}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '5f843cfb09';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '9879968b27';</script>
 <script>
 (function () {
 'use strict';
@@ -627,7 +669,7 @@ const KINDS = {
   novela: {
     label: 'Novela', unit: 'Capítulo', units: 'Capítulos', timeline: true,
     sections: [
-      { label: 'Personajes', fields: ['Rol', 'Edad', 'Rasgos', 'También llamado'], graph: true },
+      { label: 'Personajes', fields: ['Rol', 'Edad', 'Estado', 'Rasgos', 'También llamado'], graph: true },
       { label: 'Lugares', fields: ['Descripción'], graph: false },
       { label: 'Mundo y reglas', fields: [] },
       { label: 'Glosario', fields: [] }
@@ -637,7 +679,7 @@ const KINDS = {
   cuento: {
     label: 'Cuento', unit: 'Parte', units: 'Partes', timeline: true,
     sections: [
-      { label: 'Personajes', fields: ['Rol', 'Rasgos'], graph: true },
+      { label: 'Personajes', fields: ['Rol', 'Edad', 'Estado', 'Rasgos'], graph: true },
       { label: 'Lugares', fields: ['Descripción'] },
       { label: 'Motivos', fields: [] }
     ],
@@ -1831,6 +1873,7 @@ const App = {
     if (!this.colls.mine) grid.append(h('div', { class: 'empty', text: 'Tu espacio privado no está disponible en esta vista. Abre la herramienta desde claude.ai con tu cuenta.' }));
     wrap.append(grid);
     if (!mine.length && this.colls.mine && RT.canWrite) wrap.append(this.onboarding());
+    if (window.Habit) { const hp = Habit.projects(); if (hp.length) wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Tu escritura' }), h('span', { class: 'muted', text: 'Todos tus proyectos juntos' + (hp.some(x => x.shared) ? '; en los compartidos, solo lo que escribiste tú' : '') + '.' })), Habit.panel(hp, { byProject: true, title: 'Rachas y ritmo', who: Habit.me() })); }
     if (hasTeam) {
       wrap.append(h('div', { class: 'sec-hd' }, h('h2', { text: 'Compartidos' }), h('span', { class: 'muted', text: 'Los ven y editan todas las personas con acceso de colaborador a esta herramienta.' })));
       const tg = h('div', { class: 'pgrid' });
@@ -2054,13 +2097,21 @@ const App = {
     pd.update(x => {
       x.stats = { words: words, chapters: x.chapters.length, peek: peek };
       x.days = x.days || {};
+      let before;
       if (!x.days[k]) {
         const prevKeys = Object.keys(x.days).sort();
         const prev = prevKeys.length ? x.days[prevKeys[prevKeys.length - 1]].e : (st.words != null ? st.words : words);
-        x.days[k] = { s: prev, e: words };
-      } else x.days[k].e = words;
+        x.days[k] = { s: prev, e: words }; before = prev;
+      } else { before = x.days[k].e; x.days[k].e = words; }
+      // a qué hora escribes (palabras agregadas por hora del día)
+      const added = words - before;
+      if (added > 0 && added < 5000) { const hr = String(new Date().getHours()); x.days[k].h = x.days[k].h || {}; x.days[k].h[hr] = (x.days[k].h[hr] || 0) + added; }
+      // quién escribió (para ver tu propio avance en proyectos compartidos)
+      if (added) { const me = RT.me || 'local'; x.days[k].by = x.days[k].by || {}; x.days[k].by[me] = (x.days[k].by[me] || 0) + added; }
+      // se guardan unos dos años de registro; el detalle por hora, cuatro meses
       const keys = Object.keys(x.days).sort();
-      while (keys.length > 120) delete x.days[keys.shift()];
+      while (keys.length > 730) delete x.days[keys.shift()];
+      keys.slice(0, Math.max(0, keys.length - 120)).forEach(z => { if (x.days[z].h) delete x.days[z].h; });
     }, { silent: true });
     this.renderStatus();
   },
@@ -3011,6 +3062,7 @@ const Editor = {
       if (m.fix && m.fix.to && !m.fix.applied) acts.append(this.act('Aplicar', 'apply', m.id, 'primary'));
       if (m.fix && m.fix.applied) acts.append(this.act('Deshacer cambio', 'unapply', m.id));
       if (m.by === 'revisor' && m.rule === 'spell' && m.word) acts.append(this.act('Al diccionario', 'dict', m.id));
+      if (m.by === 'revisor' && m.rule === 'noficha' && m.word) acts.append(this.act('Crear ficha', 'ficha', m.id, 'primary'), this.act('No es personaje', 'noficha', m.id));
       acts.append(this.act(m.done ? 'Reabrir' : 'Resuelta', 'done', m.id));
       acts.append(this.act('Responder', 'reply', m.id));
       acts.append(this.act('Editar', 'edit', m.id));
@@ -3145,6 +3197,7 @@ const Editor = {
   },
   noteAction(a, id) {
     if (a === 'close') { this.setActive(null); return; }
+    if (a === 'ficha' || a === 'noficha') { const fm = findMark(this.cdoc.data, id); if (fm) a === 'ficha' ? Coherence.addCard(fm.m.word) : Coherence.ignore(fm.m.word); return; }
     if (a === 'dict') { const fm = findMark(this.cdoc.data, id); if (fm) Checker.addToDictionary(fm.m.word, /^\p{Lu}/u.test(fm.m.word) ? 'project' : 'user'); return; }
     const f = findMark(this.cdoc.data, id); if (!f) return;
     const m = f.m;
@@ -4138,8 +4191,8 @@ const Stats = {
       if (i % 7 === 2 || i === 29) svg.append(sv('text', { x: i === 29 ? W - 2 : i * bw + bw / 2, y: H + 16, 'text-anchor': i === 29 ? 'end' : 'middle' }, i === 29 ? 'hoy' : d.d.getDate() + ' ' + MESES[d.d.getMonth()]));
     });
     days.append(svg);
-    const streak = (() => { let s = 0; for (let i = ds.length - 1; i >= 0; i--) { if (ds[i].v > 0) s++; else if (i === ds.length - 1) continue; else break; } return s; })();
-    days.append(h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: streak ? 'Llevas ' + plural(streak, 'día seguido', 'días seguidos') + ' escribiendo.' : 'Se cuenta lo que escribes cada día en este proyecto.' }));
+    const hs = Habit.streaks(Habit.merge([{ days: P.days }]));
+    days.append(h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: hs.cur ? 'Llevas ' + plural(hs.cur, 'día seguido', 'días seguidos') + ' escribiendo en este proyecto' + (hs.best > hs.cur ? ' (tu mejor racha: ' + plural(hs.best, 'día') + ')' : '') + '.' : 'Se cuenta lo que escribes cada día en este proyecto.' }));
     two.append(days);
     wrap.append(two);
 
@@ -4159,6 +4212,8 @@ const Stats = {
     const rows = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem' });
     TKEYS.forEach(k => rows.append(h('span', { class: 'chip ' + k, style: 'cursor:default' }, h('span', { class: 'g', text: TYPES[k].g }), h('span', { text: TYPES[k].l }), h('span', { class: 'c', text: byType[k].open + ' abiertas · ' + byType[k].done + ' resueltas' }))));
     nt.append(rows);
+    if (window.Style) Style.render(wrap);
+    if (window.Habit && P.days && Object.keys(P.days).length) wrap.append(Habit.panel([{ id: App.pid, title: P.title, days: P.days }], { title: 'Rachas en este proyecto' + (App.findProj(App.pid) && App.findProj(App.pid).space === 'team' ? ' (todo el equipo)' : '') }));
     wrap.append(nt);
     st.append(wrap);
   }
@@ -5150,6 +5205,7 @@ const Profile = {
       who.append(h('div', null, h('b', { text: this.me.name || 'Tu cuenta' }), h('div', { class: 'muted', style: 'font-size:.8rem', text: App.colls.team ? 'Tus proyectos privados solo los ves tú. Esta apariencia se guarda en tu perfil y te sigue en cualquier dispositivo.' : 'Esta apariencia se guarda en este navegador.' })));
     } else who.append(h('div', { class: 'muted', style: 'font-size:.85rem', text: RT.web ? 'Todo se guarda en este navegador: tus proyectos, tu apariencia y tu clave de IA.' : RT.local ? 'Modo local: tu apariencia se guarda en este navegador.' : 'Tu apariencia se guarda en tu perfil.' }));
     body.append(who);
+    if (window.Habit) body.append(h('section', { class: 'lk' }, h('h4', { text: 'Tu escritura' }), Habit.mini()));
 
     const presets = h('div', { class: 'presets' });
     Object.keys(PRESETS).forEach(k => {
@@ -5246,9 +5302,9 @@ const Checker = {
   on(P, rule) {
     const lv = this.level(P);
     const types = (P && P.review && P.review.types) || TKEYS;
-    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh' }[rule];
+    const t = { spell: 'ort', dup: 'ort', punct: 'ort', tilde: 'ort', dial: 'ort', dequeismo: 'ort', caps: 'ort', balance: 'ort', long: 'dud', longpar: 'dud', eco: 'rep', starts: 'rep', mul: 'rec', mente: 'rec', gerund: 'rec', name: 'coh', age: 'coh', dead: 'coh', noficha: 'coh', dur: 'coh', date: 'coh' }[rule];
     if (!types.includes(t)) return false;
-    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name'].includes(rule);
+    if (lv === 'pocas') return ['spell', 'dup', 'punct', 'tilde', 'dial', 'caps', 'balance', 'name', 'age', 'dead', 'date'].includes(rule);
     if (lv === 'normal') return !['mul', 'mente', 'gerund'].includes(rule);
     return true;
   },
@@ -5372,6 +5428,8 @@ const Checker = {
       });
       COMODINES.forEach(cw => { const re2 = new RegExp('(?<![\\p{L}])' + cw + '(?![\\p{L}])', 'giu'); const ms = text.match(re2); if (ms && ms.length >= 3) { const k = text.search(re2); add('rec', 'eco', text.substr(k, cw.length), '«' + cw + '» aparece ' + ms.length + ' veces en este párrafo.'); } });
     }
+    // coherencia con la biblia y dentro del capítulo (16-coherence.js)
+    if (window.Coherence) Coherence.check(P, paras, i, text, add, r => this.on(P, r));
     // nombres parecidos a los de la biblia y ortografía
     const names = this.bibleNames(P);
     const nameSet = new Set(); names.forEach(n => n.split(/\s+/).forEach(w => nameSet.add(w)));
@@ -5476,6 +5534,459 @@ const Checker = {
 };
 window.Checker = Checker;
 window.Spell = Spell;
+
+/* ============ motor de coherencia sin IA: cruza el texto con los datos de la biblia ============ */
+const NUM_WORDS = {
+  un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+  once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veinte: 20, veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29, treinta: 30, cuarenta: 40, cincuenta: 50,
+  sesenta: 60, setenta: 70, ochenta: 80, noventa: 90, cien: 100, ciento: 100, medio: 0.5, media: 0.5
+};
+/* Convierte «42», «cuarenta y dos» o «veintisiete» en número. */
+function parseNum(s) {
+  if (!s) return null;
+  const t = fold(s.trim());
+  if (/^\d+([.,]\d+)?$/.test(t)) return parseFloat(t.replace(',', '.'));
+  const parts = t.split(/\s+y\s+|\s+/).filter(Boolean);
+  let n = 0;
+  for (const p of parts) { if (!(p in NUM_WORDS)) return null; n += NUM_WORDS[p]; }
+  return parts.length ? n : null;
+}
+const NUM_RE = '(\\d+(?:[.,]\\d+)?|(?:(?:veinti\\p{L}+|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)(?:\\s+y\\s+(?:un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve))?)|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieci\\p{L}+|cien|medio|media)';
+const UNIT_MONTHS = { ano: 12, anos: 12, mes: 1, meses: 1, semana: 0.23, semanas: 0.23, dia: 0.033, dias: 0.033, decada: 120, decadas: 120 };
+const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const NOT_NAMES = new Set(['dios', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo', 'senor', 'senora', 'don', 'dona', 'capitulo', 'navidad', 'internet'].concat(MESES_L));
+
+const Coherence = {
+  cache: new Map(),
+  field(it, re) { const f = it.fields || {}; const k = Object.keys(f).find(x => re.test(x)); return k ? (f[k] || '').trim() : ''; },
+  chars(P) {
+    const out = [];
+    ((P && P.bible && P.bible.sections) || []).forEach(s => {
+      const isChar = s.graph || /personaj/i.test(s.label);
+      (s.items || []).forEach(it => {
+        const title = (it.title || '').trim(); if (!title) return;
+        const alias = this.field(it, /tambi[eé]n llamado|alias|apodo/i).split(',').map(x => x.trim()).filter(Boolean);
+        const edadTxt = this.field(it, /^edad/i);
+        const edadM = edadTxt.match(new RegExp(NUM_RE, 'iu'));
+        const estado = this.field(it, /^estado/i).toLowerCase();
+        out.push({ id: it.id, isChar: isChar, title: title, names: [title].concat(alias), age: edadM ? parseNum(edadM[1]) : null, dead: /\b(muert[oa]|falleci[oó]|fallecid[oa]|murió|difunt[oa])\b/.test(estado) && isChar });
+      });
+    });
+    return out;
+  },
+  /* Datos del capítulo completo (se calcula una vez por versión del texto). */
+  chapterFacts(paras) {
+    const key = paras.map(p => p.id + ':' + parText(p).length).join('|');
+    const hit = this.cache.get(key); if (hit) return hit;
+    const caps = new Map();
+    const durs = [];
+    paras.forEach(p => {
+      const t = parText(p);
+      const re = /[\p{L}]+/gu; let m;
+      while ((m = re.exec(t))) {
+        if (!/^\p{Lu}\p{Ll}+$/u.test(m[0]) || m[0].length < 3) continue;
+        const before = t.slice(0, m.index).replace(/[«"“'(—–\-\s]+$/, '');
+        const start = !before || /[.!?…:]$/.test(before);
+        const k = m[0]; const e = caps.get(k) || { n: 0, mid: 0, pid: null }; e.n++;
+        if (!start) { e.mid++; if (!e.pid) e.pid = p.id; }
+        caps.set(k, e);
+      }
+      const rd = new RegExp('(?<![\\p{L}])(?:hace\\s+)?(?:unos\\s+|unas\\s+|casi\\s+|más\\s+de\\s+)?' + NUM_RE + '\\s+(años|año|meses|mes|semanas|semana|días|día|décadas|década)(?![\\p{L}])', 'giu');
+      while ((m = rd.exec(t))) {
+        const n = parseNum(m[1]); const u = UNIT_MONTHS[fold(m[2])];
+        if (n != null && u) durs.push({ pid: p.id, text: m[0].trim(), months: n * u, unit: fold(m[2]).replace(/s$/, ''), at: m.index });
+      }
+    });
+    const res = { caps: caps, durs: durs };
+    this.cache.set(key, res);
+    if (this.cache.size > 30) this.cache.delete(this.cache.keys().next().value);
+    return res;
+  },
+  check(P, paras, i, text, add, on) {
+    const p = paras[i];
+    const chars = this.chars(P);
+    const allNames = new Set(); chars.forEach(c => c.names.forEach(n => n.split(/\s+/).forEach(w => allNames.add(fold(w)))));
+    const sents = sentences(text);
+    // edades que no coinciden con la biblia: «Ana, de 40 años» o «Ana tiene 40 años»
+    if (on('age')) chars.filter(c => c.isChar && c.age).forEach(c => {
+      sents.forEach(s => {
+        if (/\b(cuando|hace|de niñ|de joven|tendría|tendrá|cumplirá|cumpliría|antes|después|años atrás)\b/i.test(s)) return;
+        c.names.forEach(n => {
+          const rr = new RegExp('(?<![\\p{L}])' + escRe(n) + '(?:,\\s*(?:de|con)\\s+|\\s+(?:ya\\s+)?(?:tiene|tenía|cumple|cumplía)\\s+)' + NUM_RE + '\\s+años(?![\\p{L}])', 'gu'); let m;
+          while ((m = rr.exec(s))) { const v = parseNum(m[1]); if (v != null && v !== c.age) add('coh', 'age', m[0], 'En la biblia, ' + c.title + ' tiene ' + c.age + ' años. Si es otro momento de la historia, ignóralo.'); }
+        });
+      });
+    });
+    // personajes que en la biblia murieron
+    if (on('dead')) chars.filter(c => c.dead).forEach(c => {
+      c.names.forEach(n => {
+        const rr = new RegExp('(?<![\\p{L}])' + escRe(n) + '\\s+(?:dijo|respondió|preguntó|sonrió|gritó|llegó|entró|abrió|miró|caminó|llamó|escribió)(?![\\p{L}])', 'gu'); let m;
+        while ((m = rr.exec(text))) add('coh', 'dead', m[0], 'En la biblia, ' + c.title + ' está muerto. ¿Es un recuerdo o un error?');
+      });
+    });
+    // variantes juntas o separadas: «Rosa María» / «Rosamaría»
+    if (on('name')) chars.forEach(c => c.names.filter(n => /\s/.test(n)).forEach(n => {
+      const joined = n.replace(/\s+/g, '');
+      const rr = new RegExp('(?<![\\p{L}])' + escRe(joined) + '(?![\\p{L}])', 'giu'); let m;
+      while ((m = rr.exec(text))) if (m[0] !== n) add('coh', 'name', m[0], 'En la biblia se escribe «' + n + '».', n);
+    }));
+    const facts = this.chapterFacts(paras);
+    // personajes que aparecen seguido y no tienen ficha
+    const hasChars = ((P.bible && P.bible.sections) || []).some(z => z.graph || /personaj/i.test(z.label));
+    if (on('noficha') && hasChars) facts.caps.forEach((e, w) => {
+      if (e.pid !== p.id || e.n < 3 || !e.mid) return;
+      const f = fold(w);
+      if (allNames.has(f) || NOT_NAMES.has(f)) return;
+      if (((P.dictionary || []).concat(P.noFicha || [])).includes(w)) return;
+      add('coh', 'noficha', w, '«' + w + '» aparece ' + e.n + ' veces y no tiene ficha en la biblia.', '', w);
+    });
+    // duraciones parecidas pero distintas en el mismo capítulo
+    if (on('dur')) {
+      const mine = facts.durs.filter(d => d.pid === p.id);
+      mine.forEach(d => {
+        const other = facts.durs.find(o => o !== d && o.unit !== d.unit && o.months !== d.months && Math.max(o.months, d.months) / Math.min(o.months, d.months) <= 1.5 && (o.pid !== d.pid || o.at < d.at));
+        if (other) add('coh', 'dur', d.text, '«' + other.text + '» y «' + d.text + '» no coinciden del todo (' + Math.round(other.months) + ' y ' + Math.round(d.months) + ' meses). ¿Es intencional?');
+      });
+    }
+    // fechas con día de la semana
+    if (on('date')) {
+      const rr = new RegExp('(?<![\\p{L}])(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo),?\\s+(\\d{1,2})\\s+de\\s+(' + MESES_L.join('|') + ')\\s+(?:de|del)\\s+(\\d{4})', 'giu'); let m;
+      while ((m = rr.exec(text))) {
+        const d = new Date(+m[4], MESES_L.indexOf(m[3].toLowerCase()), +m[2]);
+        const real = DIAS[d.getDay()];
+        if (d.getDate() === +m[2] && fold(m[1]) !== real) add('coh', 'date', m[0], 'El ' + m[2] + ' de ' + m[3].toLowerCase() + ' de ' + m[4] + ' fue ' + ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d.getDay()] + ', no ' + m[1].toLowerCase() + '.');
+      }
+    }
+  },
+  /* Crea la ficha de un nombre detectado. */
+  addCard(word) {
+    let sid = null;
+    App.proj().update(x => {
+      x.bible = x.bible || { sections: [] };
+      let s = x.bible.sections.find(z => z.graph || /personaj/i.test(z.label));
+      if (!s) { s = { id: uid('s'), label: 'Personajes', fields: ['Rol', 'Edad', 'Estado', 'También llamado'], graph: true, items: [] }; x.bible.sections.unshift(s); }
+      sid = s.id;
+      if (!s.items.some(it => (it.title || '') === word)) s.items.push({ id: uid('i'), title: word, fields: {}, body: '' });
+    }, { now: true });
+    App.chapterList().forEach(c => {
+      const d = App.ch(c.id); if (!d || !d.data) return;
+      if (allMarks(d.data).some(x => x.m.rule === 'noficha' && x.m.word === word)) d.update(x => { x.paras.forEach(p => { p.segs = normSegs(p.segs.map(s => (s.m && s.m.rule === 'noficha' && s.m.word === word) ? { t: s.m.text } : s)); }); }, { silent: true });
+    });
+    if (Editor.root) { Editor.render(true); Editor.afterChange(); }
+    App.toast('Ficha de «' + word + '» creada en la biblia.', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-biblia') } });
+  },
+  ignore(word) {
+    App.proj().update(x => { x.noFicha = x.noFicha || []; if (!x.noFicha.includes(word)) x.noFicha.push(word); }, { now: true });
+    App.chapterList().forEach(c => {
+      const d = App.ch(c.id); if (!d || !d.data) return;
+      if (allMarks(d.data).some(x => x.m.rule === 'noficha' && x.m.word === word)) d.update(x => { x.paras.forEach(p => { p.segs = normSegs(p.segs.map(s => (s.m && s.m.rule === 'noficha' && s.m.word === word) ? { t: s.m.text } : s)); }); }, { silent: true });
+    });
+    if (Editor.root) { Editor.render(true); Editor.afterChange(); }
+  }
+};
+window.Coherence = Coherence;
+
+/* ============ métricas de estilo: retrato descriptivo del texto, sin reglas ============ */
+const SAY_VERBS = ['dijo', 'preguntó', 'respondió', 'contestó', 'murmuró', 'susurró', 'gritó', 'exclamó', 'añadió', 'repitió', 'comentó', 'insistió', 'explicó', 'replicó', 'agregó', 'pensó', 'dije', 'pregunté', 'respondí', 'contesté'];
+const NOT_GERUND = new Set(['cuando', 'mando', 'bando', 'blando', 'comando', 'nefando', 'fernando', 'orlando', 'rolando', 'armando', 'ernando', 'hernando', 'segundo', 'mundo', 'fecundo']);
+
+/* Sílabas de una palabra en español (aproximación: núcleos vocálicos con diptongos e hiatos). */
+function syllables(w) {
+  w = w.toLowerCase().replace(/ü/g, 'u').replace(/qu(?=[eiéí])/g, 'q').replace(/gu(?=[eiéí])/g, 'g');
+  const strong = 'aeoáéó', accWeak = 'íú', vowels = 'aeiouáéíóú';
+  let n = 0, prev = null;
+  for (const ch of w) {
+    if (vowels.includes(ch)) {
+      if (prev == null || (strong.includes(prev) && strong.includes(ch)) || accWeak.includes(prev) || accWeak.includes(ch)) n++;
+      prev = ch;
+    } else prev = null;
+  }
+  return Math.max(1, n);
+}
+
+const Style = {
+  /* Calcula las métricas de una lista de párrafos (texto plano). */
+  compute(paras) {
+    const r = { words: 0, syl: 0, sents: 0, lens: [], paras: 0, dlgParas: 0, mente: 0, gerund: 0, passive: 0, say: {}, types: 0, mattr: 0, longWords: 0 };
+    const toks = [];
+    paras.forEach(t => {
+      if (!t || !t.trim()) return;
+      r.paras++;
+      if (/^\s*[—–-]/.test(t) || /«[^»]{2,}»/.test(t)) r.dlgParas++;
+      sentences(t).forEach(s => { const n = countWords(s); if (n) { r.lens.push(n); r.sents++; } });
+      const ws = t.match(/[\p{L}]+/gu) || [];
+      ws.forEach(w => {
+        const lw = w.toLowerCase();
+        r.words++; r.syl += syllables(w); toks.push(lw);
+        if (w.length >= 7 && lw.endsWith('mente')) r.mente++;
+        if (/(?:ando|iendo|yendo)$/.test(lw) && lw.length >= 5 && !NOT_GERUND.has(lw)) r.gerund++;
+        if (syllables(w) >= 4) r.longWords++;
+      });
+      const pas = t.match(/(?<![\p{L}])(?:fue|fueron|ha sido|han sido|había sido|habían sido|será|serán)\s+[\p{L}]+(?:ado|ada|ados|adas|ido|ida|idos|idas|cho|cha|chos|chas|to|ta|tos|tas)(?![\p{L}])/giu);
+      if (pas) r.passive += pas.length;
+      const rs = new RegExp('(?<![\\p{L}])(' + SAY_VERBS.join('|') + ')(?![\\p{L}])', 'giu'); let m;
+      while ((m = rs.exec(t))) { const k = m[1].toLowerCase(); r.say[k] = (r.say[k] || 0) + 1; }
+    });
+    r.types = new Set(toks).size;
+    // riqueza léxica: proporción de palabras distintas en ventanas móviles de 500 (no depende del largo del texto)
+    const W = 500;
+    if (toks.length >= W) {
+      const cnt = new Map(); let distinct = 0, sum = 0, nWin = 0;
+      for (let i = 0; i < toks.length; i++) {
+        const a = toks[i]; cnt.set(a, (cnt.get(a) || 0) + 1); if (cnt.get(a) === 1) distinct++;
+        if (i >= W) { const b = toks[i - W]; cnt.set(b, cnt.get(b) - 1); if (cnt.get(b) === 0) distinct--; }
+        if (i >= W - 1 && (i - W + 1) % 25 === 0) { sum += distinct / W; nWin++; }
+      }
+      r.mattr = nWin ? sum / nWin : 0; r.mattrExact = true;
+    } else r.mattr = toks.length ? r.types / toks.length : 0;
+    const mean = r.lens.length ? r.lens.reduce((a, b) => a + b, 0) / r.lens.length : 0;
+    const sd = r.lens.length > 1 ? Math.sqrt(r.lens.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (r.lens.length - 1)) : 0;
+    r.meanSent = mean; r.cv = mean ? sd / mean : 0;
+    const P = r.words ? 100 * r.syl / r.words : 0, F = r.words ? 100 * r.sents / r.words : 0;
+    r.legib = r.words ? Math.max(0, Math.min(100, 206.84 - 0.60 * P - 1.02 * F)) : 0;
+    r.per1000 = (n) => r.words ? 1000 * n / r.words : 0;
+    return r;
+  },
+  legibLabel(v) {
+    if (v >= 90) return 'muy fácil'; if (v >= 80) return 'fácil'; if (v >= 70) return 'algo fácil';
+    if (v >= 60) return 'normal'; if (v >= 50) return 'algo difícil'; if (v >= 30) return 'difícil'; return 'muy difícil';
+  },
+  rhythmLabel(cv) { return cv < 0.35 ? 'frases de largo parejo' : cv < 0.7 ? 'largos variados' : 'contrastes marcados'; },
+  num(v, d) { return v.toLocaleString('es-CL', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); },
+  render(wrap) {
+    const P = App.P(); if (!P) return;
+    const chs = App.chapterList().map((c, i) => { const d = App.ch(c.id); return { c: c, i: i, texts: d && d.data ? d.data.paras.map(parText) : [] }; });
+    const all = this.compute(chs.reduce((a, x) => a.concat(x.texts), []));
+    const panel = h('div', { class: 'panel style-panel' });
+    panel.append(h('h3', { text: 'Retrato del estilo' }), h('p', { class: 'muted', style: 'margin:-.4rem 0 .9rem;font-size:.8125rem', text: 'Medidas descriptivas, no reglas: sirven para ver tu voz y comparar ' + kindOf(P).units.toLowerCase() + ' entre sí.' }));
+    if (all.words < 60) { panel.append(h('p', { class: 'muted', text: 'Escribe un poco más (unas 60 palabras) para ver el retrato.' })); wrap.append(panel); return; }
+    const grid = h('div', { class: 'style-grid' });
+    const cell = (k, v, sub, help) => grid.append(h('div', { class: 'style-cell', title: help || '' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', text: v }), sub ? h('div', { class: 's', text: sub }) : null));
+    cell('Legibilidad', this.num(all.legib), this.legibLabel(all.legib) + ' (Fernández Huerta)', 'Índice de 0 a 100 para español: más alto, más fácil de leer. Depende del largo de palabras y frases. La literatura suele quedar entre 50 y 80.');
+    cell('Palabras por frase', this.num(all.meanSent, 1), this.rhythmLabel(all.cv), 'Promedio de palabras por frase. Debajo, cuánto varía el largo de una frase a otra.');
+    cell('Riqueza léxica', this.num(100 * all.mattr) + '%', all.mattrExact ? 'palabras distintas cada 500' : 'palabras distintas (texto corto)', 'Proporción de palabras distintas en tramos de 500 palabras. No depende del largo total.');
+    cell('Diálogo', this.num(all.paras ? 100 * all.dlgParas / all.paras : 0) + '%', 'de los párrafos', 'Párrafos que empiezan con raya o que tienen una cita entre comillas.');
+    cell('Adverbios en -mente', this.num(all.per1000(all.mente), 1), 'cada mil palabras');
+    cell('Gerundios', this.num(all.per1000(all.gerund), 1), 'cada mil palabras');
+    cell('Pasiva con «ser»', this.num(all.per1000(all.passive), 1), 'cada mil palabras', '«fue escrito», «han sido vistos»…');
+    cell('Palabras largas', this.num(all.words ? 100 * all.longWords / all.words : 0) + '%', 'de cuatro sílabas o más');
+    panel.append(grid);
+    // largo de frases
+    const buckets = [[1, 5], [6, 10], [11, 20], [21, 30], [31, 40], [41, 1e9]];
+    const bc = buckets.map(([a, b]) => all.lens.filter(n => n >= a && n <= b).length);
+    const maxB = Math.max(1, ...bc);
+    const two = h('div', { class: 'two', style: 'margin-top:1rem' });
+    const hist = h('div', { class: 'style-hist' });
+    buckets.forEach(([a, b], i) => hist.append(h('div', { class: 'row', style: 'gap:.6rem;flex-wrap:nowrap' },
+      h('span', { class: 'lbl', text: b > 1e8 ? 'más de 40' : a + '–' + b }),
+      h('span', { class: 'bar' }, h('span', { style: 'width:' + (100 * bc[i] / maxB) + '%' })),
+      h('span', { class: 'n', text: fmtN(bc[i]) }))));
+    two.append(h('div', null, h('h4', { text: 'Largo de las frases (palabras)' }), hist));
+    // verbos de decir
+    const say = Object.entries(all.say).sort((a, b) => b[1] - a[1]);
+    const totalSay = say.reduce((a, x) => a + x[1], 0);
+    const sayBox = h('div', null, h('h4', { text: 'Verbos de habla' }));
+    if (totalSay) {
+      const cloud = h('div', { class: 'wcloud' });
+      say.slice(0, 12).forEach(([w, n]) => cloud.append(h('button', { type: 'button', onclick: () => Search.open(w, true) }, w, h('b', { text: String(n) }))));
+      const dijo = (all.say['dijo'] || 0) + (all.say['dije'] || 0);
+      sayBox.append(cloud, h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: '«Dijo» es ' + this.num(100 * dijo / totalSay) + '% de los ' + plural(totalSay, 'verbo') + ' de habla.' }));
+    } else sayBox.append(h('p', { class: 'muted', text: 'No hay verbos de habla todavía.' }));
+    two.append(sayBox);
+    panel.append(two);
+    // comparación por capítulo
+    const rows = chs.map(x => Object.assign({ x: x }, { r: this.compute(x.texts) })).filter(z => z.r.words >= 30);
+    if (rows.length >= 2) {
+      const tbl = h('table', { class: 'style-table' });
+      tbl.append(h('thead', null, h('tr', null, h('th', { text: App.unit() }), h('th', { text: 'Palabras' }), h('th', { text: 'P/frase' }), h('th', { text: 'Legibilidad' }), h('th', { text: 'Diálogo' }), h('th', { text: 'Riqueza' }))));
+      const tb = h('tbody');
+      const avgL = all.legib, avgS = all.meanSent;
+      rows.forEach(({ x, r }) => {
+        const off = (v, ref, tol) => Math.abs(v - ref) > tol ? ' off' : '';
+        tb.append(h('tr', { onclick: () => App.go(App.chHash(x.c.id)), style: 'cursor:pointer' },
+          h('td', { text: (x.i + 1) + '. ' + (x.c.title || App.unit()) }),
+          h('td', { text: fmtN(r.words) }),
+          h('td', { class: off(r.meanSent, avgS, avgS * 0.35), text: this.num(r.meanSent, 1) }),
+          h('td', { class: off(r.legib, avgL, 12), text: this.num(r.legib) }),
+          h('td', { text: this.num(r.paras ? 100 * r.dlgParas / r.paras : 0) + '%' }),
+          h('td', { text: this.num(100 * r.mattr) + '%' })));
+      });
+      tbl.append(tb);
+      panel.append(h('h4', { style: 'margin-top:1.1rem', text: 'Por ' + App.unit().toLowerCase() }), h('div', { style: 'overflow-x:auto' }, tbl), h('p', { class: 'muted', style: 'margin:.4rem 0 0;font-size:.75rem', text: 'En cursiva, los valores que se alejan bastante del promedio del proyecto. Puede ser intencional.' }));
+    }
+    wrap.append(panel);
+  }
+};
+window.Style = Style;
+window.syllables = syllables;
+
+/* ============ rachas y seguimiento de la escritura ============ */
+const DIAS_L = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const Habit = {
+  /* Une los registros diarios de varios proyectos: dayKey → {w, h:[24]} */
+  /* En proyectos compartidos (x.shared) y con opts.who, cuenta solo lo que escribió esa persona. */
+  merge(list, opts) {
+    const who = opts && opts.who;
+    const map = new Map();
+    list.forEach(x => Object.entries(x.days || {}).forEach(([k, d]) => {
+      let w = Math.max(0, (d.e || 0) - (d.s || 0)), f = 1;
+      if (who && x.shared) { const tot = w; w = d.by ? Math.max(0, d.by[who] || 0) : 0; f = tot ? Math.min(1, w / tot) : 0; }
+      const e = map.get(k) || { w: 0, h: new Array(24).fill(0) };
+      e.w += w;
+      if (d.h && f) Object.entries(d.h).forEach(([hr, n]) => { e.h[+hr] += n * f; });
+      map.set(k, e);
+    }));
+    return map;
+  },
+  goal() { return +(App.prefs.dailyGoal || 0); },
+  hit(e) { const g = this.goal(); return !!e && e.w > 0 && (!g || e.w >= g); },
+  streaks(map) {
+    const keys = Array.from(map.keys()).filter(k => this.hit(map.get(k))).sort();
+    let best = 0, run = 0, prev = null, bestEnd = null;
+    keys.forEach(k => {
+      const d = new Date(k + 'T12:00:00');
+      run = (prev && (d - prev) / 864e5 < 1.5) ? run + 1 : 1;
+      if (run > best) { best = run; bestEnd = k; }
+      prev = d;
+    });
+    // racha actual: cuenta hasta hoy, o hasta ayer si hoy todavía no escribes
+    let cur = 0; const d = new Date();
+    const todayHit = this.hit(map.get(dayKey(d)));
+    if (!todayHit) d.setDate(d.getDate() - 1);
+    while (this.hit(map.get(dayKey(d)))) { cur++; d.setDate(d.getDate() - 1); }
+    return { cur: cur, best: best, bestEnd: bestEnd, todayHit: todayHit };
+  },
+  range(map, n) {
+    const out = []; for (let i = n - 1; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = dayKey(d); const e = map.get(k); out.push({ k: k, d: d, w: e ? e.w : 0, e: e }); }
+    return out;
+  },
+  summary(map) {
+    const last30 = this.range(map, 30), last7 = last30.slice(-7);
+    const active = last30.filter(x => x.w > 0);
+    const wd = new Array(7).fill(0), wdN = new Array(7).fill(0), hr = new Array(24).fill(0);
+    map.forEach((e, k) => { if (!e.w) return; const d = new Date(k + 'T12:00:00'); wd[d.getDay()] += e.w; wdN[d.getDay()]++; e.h.forEach((n, i) => { hr[i] += n; }); });
+    const sum = (a) => a.reduce((s, x) => s + x.w, 0);
+    return { w30: sum(last30), w7: sum(last7), days30: active.length, days7: last7.filter(x => x.w > 0).length, avgDay: active.length ? Math.round(sum(active) / active.length) : 0, wd: wd, wdN: wdN, hr: hr, bestDay: Math.max(0, ...Array.from(map.values()).map(e => e.w)) };
+  },
+  moment(hr) {
+    const parts = [['madrugada', 0, 6], ['mañana', 6, 12], ['tarde', 12, 19], ['noche', 19, 24]];
+    const tot = hr.reduce((a, b) => a + b, 0); if (!tot) return null;
+    return parts.map(([l, a, b]) => ({ l: l, v: hr.slice(a, b).reduce((x, y) => x + y, 0) / tot })).sort((x, y) => y.v - x.v);
+  },
+  /* Mapa de calor de las últimas semanas, al estilo de un calendario. */
+  heat(map, weeks) {
+    const cs = 13, gap = 3, top = 16, left = 26;
+    const end = new Date(); const start = new Date(); start.setDate(end.getDate() - (weeks * 7 - 1));
+    // empezar en lunes
+    while (start.getDay() !== 1) start.setDate(start.getDate() - 1);
+    const days = []; for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) days.push(new Date(d));
+    const cols = Math.ceil(days.length / 7);
+    const W = left + cols * (cs + gap), H = top + 7 * (cs + gap);
+    const vals = days.map(d => { const e = map.get(dayKey(d)); return e ? e.w : 0; });
+    const max = Math.max(1, ...vals);
+    const g = this.goal();
+    const svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'heat', role: 'img', 'aria-label': 'Calendario de días escritos', style: 'width:100%;max-width:' + (W * 1.25) + 'px;height:auto' });
+    ['lun', '', 'mié', '', 'vie', '', 'dom'].forEach((t, i) => t && svg.append(sv('text', { x: 0, y: top + i * (cs + gap) + cs - 2 }, t)));
+    let lastM = -1;
+    days.forEach((d, i) => {
+      const c = Math.floor(i / 7), r = (d.getDay() + 6) % 7, v = vals[i];
+      if (d.getDate() <= 7 && d.getMonth() !== lastM && r === 0) { lastM = d.getMonth(); svg.append(sv('text', { x: left + c * (cs + gap), y: 10 }, MESES[d.getMonth()])); }
+      const lvl = !v ? 0 : g ? (v >= g ? (v >= 2 * g ? 4 : 3) : (v >= g / 2 ? 2 : 1)) : Math.min(4, 1 + Math.floor(3.999 * v / max));
+      const rect = sv('rect', { x: left + c * (cs + gap), y: top + r * (cs + gap), width: cs, height: cs, rx: 2, class: 'h' + lvl + (dayKey(d) === dayKey() ? ' today' : '') });
+      rect.append(sv('title', null, DIAS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MESES[d.getMonth()] + ': ' + (v ? fmtN(v) + ' palabras' : 'sin escribir')));
+      svg.append(rect);
+    });
+    return svg;
+  },
+  nudge(s, sm) {
+    const g = this.goal();
+    if (s.todayHit) return s.cur > 1 ? 'Hoy ya escribiste: van ' + plural(s.cur, 'día seguido', 'días seguidos') + '.' : 'Hoy ya escribiste.';
+    if (s.cur) return 'Escribe hoy' + (g ? ' ' + fmtN(g) + ' palabras' : '') + ' para mantener tu racha de ' + plural(s.cur, 'día') + '.';
+    if (sm.days30) return 'Hoy es buen día para retomar.' + (s.best > 1 ? ' Tu mejor racha fue de ' + plural(s.best, 'día') + '.' : '');
+    return 'Cada día que escribas quedará marcado aquí.';
+  },
+  /* Panel completo. list: [{id, title, days}]. opts.byProject muestra el desglose y el filtro. */
+  panel(list, opts) {
+    opts = opts || {};
+    const box = h('div', { class: 'panel habit' });
+    const sel = opts.byProject && list.length > 1 ? h('select', { class: 'sel', 'aria-label': 'Proyecto', style: 'width:auto;max-width:16rem' }, h('option', { value: '', text: 'Todos los proyectos' }), ...list.map(x => h('option', { value: x.id, text: x.title || 'Sin título' }))) : null;
+    const goalInp = h('input', { class: 'inp', type: 'number', min: '0', step: '50', value: String(this.goal() || ''), placeholder: 'sin meta', 'aria-label': 'Meta diaria de palabras', style: 'width:6.5rem' });
+    const body = h('div');
+    const draw = () => {
+      const pick = sel && sel.value ? list.filter(x => x.id === sel.value) : list;
+      const map = this.merge(pick, opts);
+      const s = this.streaks(map), sm = this.summary(map);
+      body.textContent = '';
+      const tiles = h('div', { class: 'tiles habit-tiles' });
+      const tile = (v, k, cls) => tiles.append(h('div', { class: 'tile ' + (cls || '') }, h('div', { class: 'v', text: v }), h('div', { class: 'k', text: k })));
+      tile(fmtN(s.cur), s.cur === 1 ? 'día de racha' : 'días de racha', s.cur ? 'on' : '');
+      tile(fmtN(s.best), 'mejor racha');
+      tile(fmtN(sm.days30) + '/30', 'días escritos de los últimos 30');
+      tile(fmtN(sm.w7), 'palabras en 7 días');
+      tile(fmtN(sm.avgDay), 'promedio por día escrito');
+      body.append(h('p', { class: 'habit-nudge', text: this.nudge(s, sm) }), tiles);
+      body.append(h('div', { class: 'heat-wrap' }, this.heat(map, opts.weeks || 26), h('div', { class: 'heat-legend' }, h('span', { text: 'menos' }), ...[0, 1, 2, 3, 4].map(i => h('i', { class: 'h' + i })), h('span', { text: 'más' + (this.goal() ? ' (meta: ' + fmtN(this.goal()) + ')' : '') }))));
+      // cuándo escribes
+      const when = h('div', { class: 'two', style: 'margin-top:.8rem' });
+      const wdBox = h('div', null, h('h4', { text: 'Qué días escribes' }));
+      const order = [1, 2, 3, 4, 5, 6, 0], maxWd = Math.max(1, ...sm.wd);
+      order.forEach(i => wdBox.append(h('div', { class: 'row style-hist-row', style: 'gap:.6rem;flex-wrap:nowrap' }, h('span', { class: 'lbl', text: DIAS_L[i].slice(0, 3) }), h('span', { class: 'bar' }, h('span', { style: 'width:' + (100 * sm.wd[i] / maxWd) + '%' })), h('span', { class: 'n', text: sm.wdN[i] ? plural(sm.wdN[i], 'vez', 'veces') : '' }))));
+      const mom = this.moment(sm.hr);
+      const mBox = h('div', null, h('h4', { text: 'A qué hora' }));
+      if (mom) {
+        mom.forEach(x => mBox.append(h('div', { class: 'row style-hist-row', style: 'gap:.6rem;flex-wrap:nowrap' }, h('span', { class: 'lbl', text: x.l }), h('span', { class: 'bar' }, h('span', { style: 'width:' + (100 * x.v) + '%' })), h('span', { class: 'n', text: Math.round(100 * x.v) + '%' }))));
+        mBox.append(h('p', { class: 'muted', style: 'margin:.4rem 0 0;font-size:.8125rem', text: 'Escribes más en la ' + mom[0].l + '.' }));
+      } else mBox.append(h('p', { class: 'muted', text: 'Se irá llenando a medida que escribas.' }));
+      when.append(wdBox, mBox);
+      body.append(when);
+      // desglose por proyecto
+      if (opts.byProject && list.length > 1 && !(sel && sel.value)) {
+        const rows = list.map(x => { const m = this.merge([x], opts); const r = this.range(m, 30); const last = Array.from(m.keys()).filter(k => m.get(k).w > 0).sort().pop(); return { x: x, w30: r.reduce((a, z) => a + z.w, 0), d30: r.filter(z => z.w > 0).length, cur: this.streaks(m).cur, last: last }; }).sort((a, b) => b.w30 - a.w30 || (b.last || '').localeCompare(a.last || ''));
+        const tbl = h('table', { class: 'style-table' }, h('thead', null, h('tr', null, h('th', { text: 'Proyecto' }), h('th', { text: '30 días' }), h('th', { text: 'Días' }), h('th', { text: 'Racha' }), h('th', { text: 'Última vez' }))));
+        const tb = h('tbody');
+        rows.forEach(r => tb.append(h('tr', { style: 'cursor:pointer', onclick: () => { sel.value = r.x.id; draw(); } }, h('td', { text: r.x.title || 'Sin título' }), h('td', { text: fmtN(r.w30) }), h('td', { text: String(r.d30) }), h('td', { text: r.cur ? plural(r.cur, 'día') : '—' }), h('td', { text: r.last ? this.ago(r.last) : '—' }))));
+        tbl.append(tb);
+        body.append(h('h4', { style: 'margin-top:1rem', text: 'Por proyecto' }), h('div', { style: 'overflow-x:auto' }, tbl));
+      }
+    };
+    if (sel) sel.addEventListener('change', draw);
+    goalInp.addEventListener('change', () => { App.prefs.dailyGoal = Math.max(0, +goalInp.value || 0); App.savePrefs(); draw(); });
+    box.append(h('div', { class: 'row', style: 'justify-content:space-between;align-items:flex-start;gap:.6rem;margin-bottom:.4rem' },
+      h('h3', { style: 'margin:0', text: opts.title || 'Tu escritura' }),
+      h('div', { class: 'row', style: 'gap:.5rem' }, sel, h('label', { class: 'row muted', style: 'gap:.35rem;font-size:.8125rem' }, 'Meta diaria', goalInp))));
+    box.append(body);
+    draw();
+    return box;
+  },
+  ago(k) {
+    const d = new Date(k + 'T12:00:00'), t = new Date(dayKey() + 'T12:00:00');
+    const n = Math.round((t - d) / 864e5);
+    if (n <= 0) return 'hoy'; if (n === 1) return 'ayer'; if (n < 7) return 'hace ' + n + ' días';
+    return d.getDate() + ' ' + MESES[d.getMonth()];
+  },
+  /* Lista de proyectos con registro (para el inicio). */
+  projects() {
+    return App.allProjects().filter(x => !x.doc.data.trashed && x.doc.data.days && Object.keys(x.doc.data.days).length).map(x => ({ id: x.doc.id, title: x.doc.data.title, days: x.doc.data.days, shared: x.space === 'team' }));
+  },
+  me() { return RT.me || 'local'; },
+  /* Resumen corto para el perfil: todos tus proyectos. */
+  mini() {
+    const list = this.projects();
+    const box = h('div', { class: 'habit-mini' });
+    if (!list.length) { box.append(h('p', { class: 'muted', style: 'margin:0;font-size:.85rem', text: 'Cuando escribas, aquí verás tus rachas y cuánto escribes, sumando todos tus proyectos.' })); return box; }
+    const map = this.merge(list, { who: this.me() });
+    const s = this.streaks(map), sm = this.summary(map);
+    const t = (v, k) => h('div', null, h('b', { text: v }), h('span', { text: k }));
+    box.append(h('div', { class: 'habit-mini-row' }, t(fmtN(s.cur), 'racha'), t(fmtN(s.best), 'mejor racha'), t(fmtN(sm.days30) + '/30', 'días'), t(fmtN(sm.w30), 'palabras en 30 días')));
+    box.append(h('p', { class: 'muted', style: 'margin:.5rem 0 0;font-size:.8125rem', text: this.nudge(s, sm) }));
+    box.append(btn('Ver detalle por proyecto', () => { UI.closeDrawer(); App.go(''); setTimeout(() => { const e = document.querySelector('.habit'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250); }, 'small'));
+    return box;
+  }
+};
+window.Habit = Habit;
 
 /* utilidades visibles para depurar desde la consola */
 window.MDE = { allMarks: allMarks, findMark: findMark, parText: parText, RT: RT, Store: Store };
