@@ -43,8 +43,14 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   await pg.evaluate(() => document.querySelector('.rd-zl').click()); await sleep(300);
   ok(await pg.evaluate(() => Lectura.prefs().font === 1), 'el 100 % vuelve al tamaño de tu apariencia');
   ok(await pg.evaluate(() => document.querySelector('.rd-book').getBoundingClientRect().height >= window.innerHeight - 130), 'el cuadernillo usa casi todo el alto');
-  await pg.keyboard.press('ArrowRight'); await sleep(700);
-  ok(await pg.evaluate((i) => Lectura.idx === i + 2, st.idx), 'flecha derecha pasa a la doble página siguiente');
+  await pg.keyboard.press('ArrowRight'); await sleep(300);
+  ok(await pg.evaluate(() => !!document.querySelector('.rd-leaf') && !!document.querySelector('.rd-face.back .rd-flow')), 'la hoja gira con las dos caras (frente y reverso)');
+  await pg.screenshot({ path: path.resolve(__dirname, '_flip-mid.png') });
+  await sleep(700);
+  ok(await pg.evaluate((i) => Lectura.idx === i + 2 && !document.querySelector('.rd-leaf'), st.idx), 'flecha derecha pasa a la doble página siguiente');
+  await pg.keyboard.press('ArrowLeft'); await sleep(250); await pg.screenshot({ path: path.resolve(__dirname, '_flip-back.png') }); await sleep(800);
+  ok(await pg.evaluate((i) => Lectura.idx === i, st.idx), 'flecha izquierda vuelve atrás');
+  await pg.keyboard.press('ArrowRight'); await sleep(1000);
   ok(await pg.evaluate(() => Lectura.prefs().anim === true), 'animación activada por defecto');
   await pg.evaluate(() => Array.from(document.querySelectorAll('.rd-seg button')).find(b => /^1 pág/.test(b.textContent)).click()); await sleep(500);
   ok(await pg.evaluate(() => Lectura.spread === 1 && !document.querySelector('.reader.spread')), 'cambia a una página');
@@ -66,6 +72,9 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   await pg.evaluate(() => Lectura.open()); await sleep(700);
   ok(await pg.evaluate(() => Lectura.spread === 1 && document.querySelector('.rd-book').getBoundingClientRect().width <= 390), 'en el celular, una página que cabe');
   await pg.screenshot({ path: path.resolve(__dirname, '_lectura-movil.png') });
+  await pg.evaluate(() => Lectura.setPref('anim', true));
+  await pg.evaluate(() => Lectura.go(1)); await sleep(330); await pg.screenshot({ path: path.resolve(__dirname, '_flip-movil.png') }); await sleep(700);
+  ok(await pg.evaluate(() => !document.querySelector('.rd-leaf')), 'en una página también gira la hoja');
   ok(!errs.length, 'sin errores de página ' + errs.join(' | '));
   await b.close(); srv.kill();
   process.exit(fails ? 1 : 0);

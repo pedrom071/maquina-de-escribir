@@ -696,9 +696,9 @@ body.reading{overflow:hidden}
 .rd-tog{border:1px solid var(--line2);background:none;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;color:var(--soft);cursor:pointer}
 .rd-tog[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .rd-stage{flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:0}
-.rd-book{position:relative;background:var(--sheet);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 14px 40px -12px rgba(0,0,0,.25);overflow:hidden;user-select:none;-webkit-user-select:none}
+.rd-book{position:relative;background:var(--sheet);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06),0 14px 40px -12px rgba(0,0,0,.25);user-select:none;-webkit-user-select:none;perspective:7000px}
 .reader.spread .rd-book::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:60px;margin-left:-30px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.07) 45%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.07) 55%,transparent);pointer-events:none}
-.rd-clip{position:absolute;inset:0;overflow:hidden}
+.rd-clip{position:absolute;inset:0;overflow:hidden;border-radius:3px}
 .rd-flow{column-fill:auto;font:400 var(--text-size,19px)/var(--leading,1.78) var(--f-text);color:var(--ink);will-change:transform;text-align:justify;-webkit-hyphens:auto;hyphens:auto}
 .rd-flow p{margin:0;text-indent:1.5em;orphans:2;widows:2}
 .rd-flow h2+p,.rd-flow .rd-eb+h2+p,.rd-flow p.rd-blank+p{text-indent:0}
@@ -717,11 +717,6 @@ body.reading{overflow:hidden}
 .rd-special h2{font-size:1.45em}
 .rd-nums{position:absolute;left:0;right:0;bottom:.75rem;display:flex;pointer-events:none;font:500 .66rem var(--f-mono);color:var(--faint)}
 .rd-nums span{flex:1;text-align:center}
-.rd-turn{position:absolute;inset:0;pointer-events:none;opacity:0}
-.rd-turn.go.fwd{animation:rd-sweep-f .55s ease}
-.rd-turn.go.back{animation:rd-sweep-b .55s ease}
-@keyframes rd-sweep-f{0%{opacity:.9;background:linear-gradient(90deg,transparent 60%,rgba(0,0,0,.10) 85%,transparent)}100%{opacity:0;background:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.0) 10%,transparent)}}
-@keyframes rd-sweep-b{0%{opacity:.9;background:linear-gradient(270deg,transparent 60%,rgba(0,0,0,.10) 85%,transparent)}100%{opacity:0}}
 .rd-arrow{border:0;background:none;color:var(--soft);font:300 2.4rem/1 var(--f-display);width:48px;height:80px;cursor:pointer;border-radius:6px;transition:color .15s,background .15s}
 .rd-arrow:hover{color:var(--accent);background:var(--accent-soft)}
 .rd-bottom{display:flex;align-items:center;gap:.9rem;padding:.4rem 1.2rem .7rem;justify-content:center;height:44px;flex:0 0 auto}
@@ -730,7 +725,7 @@ body.reading{overflow:hidden}
 .rd-hint{font-size:.72rem;color:var(--faint)}
 @media (max-width:1000px){.rd-hint{display:none}.rd-ctl .lbl{display:none}}
 @media (max-width:700px){.rd-arrow{display:none}.rd-top{padding:.4rem .5rem;gap:.4rem}.rd-ttl{font-size:.8rem}.rd-ttl b{font-size:.95rem}.rd-where{display:none}.rd-tog{padding:.25rem .5rem}.rd-seg button{padding:.25rem .4rem}}
-@media (prefers-reduced-motion:reduce){.rd-flow{transition:none!important}.rd-turn{display:none}}
+@media (prefers-reduced-motion:reduce){.rd-flow{transition:none!important}}
 
 /* ---------- ajustes de la revisión general ---------- */
 .chip.zero .lb{display:none}
@@ -865,6 +860,26 @@ body.focus .idea-fab,body.reading .idea-fab,body.has-drawer .idea-fab{display:no
 .ib-empty{font-size:.75rem;color:var(--faint);text-align:center;padding:.6rem 0;border:1px dashed var(--line2);border-radius:5px}
 .ib-part{flex:0 0 auto;writing-mode:vertical-rl;transform:rotate(180deg);font:500 .7rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--soft);align-self:stretch;display:flex;align-items:center;justify-content:center;padding:.4rem 0}
 
+/* vuelta de hoja */
+.rd-leaf{position:absolute;top:0;z-index:4;transform-style:preserve-3d;will-change:transform;pointer-events:none}
+.rd-face{position:absolute;inset:0;overflow:hidden;background:var(--sheet);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.rd-face .rd-flow{will-change:auto}
+.rd-face.back{transform:rotateY(180deg)}
+.rd-face.blank{background:linear-gradient(90deg,var(--sheet),color-mix(in srgb,var(--sheet) 92%,#000))}
+.rd-face.under{z-index:3;position:absolute;top:0}
+.rd-shade{position:absolute;inset:0;pointer-events:none;opacity:0}
+.rd-face.front .rd-shade{background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.06) 35%,rgba(255,255,255,.05) 70%,rgba(0,0,0,.18))}
+.rd-face.back .rd-shade{background:linear-gradient(270deg,rgba(0,0,0,.3),rgba(0,0,0,.05) 40%,transparent)}
+.rd-face.under .rd-shade{background:linear-gradient(90deg,rgba(0,0,0,.35),transparent 55%)}
+.reader.spread .rd-leaf[style*="right center"] .rd-face.front .rd-shade{background:linear-gradient(270deg,rgba(0,0,0,.28),rgba(0,0,0,.06) 35%,rgba(255,255,255,.05) 70%,rgba(0,0,0,.18))}
+.rd-book.flipping{cursor:default}
+.rd-book::after{z-index:5}
+.focus-sw{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--sheet)}
+.focus-sw button{display:inline-flex;align-items:center;gap:.3rem;border:0;background:none;padding:.32rem .55rem;font:500 .78rem var(--f-ui);color:var(--ink);cursor:pointer}
+.focus-sw button+button{border-left:1px solid var(--line)}
+.focus-sw button:hover{background:var(--accent-soft);color:var(--accent)}
+.focus-sw svg{width:15px;height:15px}
+
 </style>
 </head>
 <body>
@@ -873,7 +888,7 @@ body.focus .idea-fab,body.reading .idea-fab,body.has-drawer .idea-fab{display:no
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = 'a23fe93435';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = '30f8ca222d';</script>
 <script>
 (function () {
 'use strict';
@@ -1838,6 +1853,8 @@ const ICONS = {
   grid: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
   leer: '<path d="M12 6.5C10 5 7.5 4.5 4 4.5v13c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-13c-3.5 0-6 .5-8 2zM12 6.5v13"/>',
   idea: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  foco: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/>',
+  ultra: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
   book: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
   graph: '<circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 8.3l2.6 7.4M15.8 8.3l-2.6 7.4M8.5 7h7"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -2909,6 +2926,9 @@ const Editor = {
     if (RT.canWrite) tools.append(btn([icon('spark'), h('span', { class: 'lbl', text: 'Revisar' })], (e) => this.reviewMenu(e.currentTarget), 'small'));
     if ((App.P() || {}).kind === 'poesia') tools.append(btn([icon('metro'), h('span', { class: 'lbl', text: 'Métrica' })], () => Metrica.open(), 'small'));
     tools.append(btn([icon('eye'), h('span', { class: 'lbl', text: 'Ver' })], (e) => this.viewMenu(e.currentTarget), 'small'));
+    tools.append(h('div', { class: 'focus-sw', role: 'group', 'aria-label': 'Modo foco' },
+      h('button', { type: 'button', title: 'Modo foco (' + keys('mod', '.') + ')', onclick: () => this.setFocus(true) }, icon('foco'), h('span', { class: 'lbl', text: 'Foco' })),
+      h('button', { type: 'button', title: 'Ultra foco: solo escribir, sin marcas ni revisión (' + keys('mod', 'shift', '.') + ')', onclick: () => this.setUltra(true) }, icon('ultra'), h('span', { class: 'lbl', text: 'Ultra' }))));
     tools.append(ibtn('leer', 'Leer como libro (' + keys('mod', 'shift', 'L') + ')', () => Lectura.open(this.cid)));
     tools.append(ibtn('clock', 'Historial de versiones', () => Versions.open(this.cid)));
     tools.append(ibtn('more', 'Más opciones', (e) => this.moreMenu(e.currentTarget)));
@@ -7592,9 +7612,8 @@ const Lectura = {
       this.flow.append(sec);
     });
     this.clip = h('div', { class: 'rd-clip' }, this.flow);
-    this.turn = h('div', { class: 'rd-turn', 'aria-hidden': 'true' });
     this.nums = h('div', { class: 'rd-nums', 'aria-hidden': 'true' });
-    this.book = h('div', { class: 'rd-book' }, this.clip, this.turn, this.nums);
+    this.book = h('div', { class: 'rd-book' }, this.clip, this.nums);
     const prev = h('button', { type: 'button', class: 'rd-arrow prev', 'aria-label': 'Página anterior', onclick: () => this.go(-1) }, '‹');
     const next = h('button', { type: 'button', class: 'rd-arrow next', 'aria-label': 'Página siguiente', onclick: () => this.go(1) }, '›');
     this.range = h('input', { type: 'range', min: '1', max: '1', value: '1', 'aria-label': 'Página' });
@@ -7629,6 +7648,8 @@ const Lectura = {
   layout(keep, cid, pid) {
     if (!this.el) return;
     const anchor = keep ? this.anchor() : null;
+    this.layoutId = (this.layoutId || 0) + 1;
+    if (this.anim) { try { this.anim.finish(); } catch (e) {} }
     const pr = this.prefs();
     const vw = window.innerWidth, vh = window.innerHeight;
     // la hoja y la letra son las de tu apariencia (ancho de hoja, márgenes, tamaño e interlineado);
@@ -7684,26 +7705,74 @@ const Lectura = {
     for (const p of ps) { const r = p.getBoundingClientRect(); if (r.left >= br.left - 2 && r.left < br.right) return p.dataset.pid; }
     return null;
   },
-  go(dir) { this.goto(this.idx + dir * this.spread, this.prefs().anim, dir); },
+  go(dir) {
+    const n = this.idx, sp = this.spread;
+    let t = Math.max(0, Math.min(this.total - 1, n + dir * sp)); if (sp === 2) t -= t % 2;
+    if (t === n) return;
+    if (this.prefs().anim && !matchMedia('(prefers-reduced-motion: reduce)').matches) this.flip(dir, t);
+    else this.goto(t, false);
+  },
+  /* Copias del texto para las caras de la hoja que gira (se rehacen al cambiar el tamaño). */
+  ensureClones() {
+    if (this.clones && this.clonesFor === this.layoutId) return;
+    const mk = () => { const f = this.flow.cloneNode(true); f.style.transition = 'none'; f.style.transform = 'none'; f.setAttribute('aria-hidden', 'true'); return f; };
+    this.clones = [mk(), mk(), mk()]; this.clonesFor = this.layoutId;
+  },
+  face(page, k, cls) {
+    const f = h('div', { class: 'rd-face ' + (cls || '') });
+    f.style.padding = this.clip.style.padding;
+    if (page != null && page >= 0 && page < this.total) { const c = this.clones[k]; c.style.transform = 'translateX(' + (-page * this.stride) + 'px)'; f.append(c); }
+    f.append(h('div', { class: 'rd-shade' }));
+    return f;
+  },
+  /* Vuelta de hoja: la página gira sobre el lomo como en un libro de papel. */
+  flip(dir, target) {
+    if (this.anim) { try { this.anim.finish(); } catch (e) {} }
+    this.ensureClones();
+    const n = this.idx, sp = this.spread, W = this.stride, H = this.book.clientHeight;
+    const leaf = h('div', { class: 'rd-leaf' });
+    leaf.style.width = W + 'px'; leaf.style.height = H + 'px';
+    let under = null, front, back, from, to, left, origin;
+    if (sp === 2 && dir > 0) { left = W; origin = 'left center'; front = this.face(n + 1, 0, 'front'); back = this.face(n + 2, 1, 'back'); under = this.face(n + 3, 2, 'under'); from = 0; to = -180; }
+    else if (sp === 2) { left = 0; origin = 'right center'; front = this.face(n, 0, 'front'); back = this.face(target + 1, 1, 'back'); under = this.face(target, 2, 'under'); from = 0; to = 180; }
+    else if (dir > 0) { left = 0; origin = 'left center'; front = this.face(n, 0, 'front'); back = this.face(null, 1, 'back blank'); under = this.face(target, 2, 'under'); from = 0; to = -180; }
+    else { left = 0; origin = 'left center'; front = this.face(target, 0, 'front'); back = this.face(null, 1, 'back blank'); from = -180; to = 0; }
+    leaf.style.left = left + 'px'; leaf.style.transformOrigin = origin;
+    leaf.append(front, back);
+    if (under) { under.style.left = left + 'px'; under.style.width = W + 'px'; under.style.height = H + 'px'; this.book.append(under); }
+    this.book.append(leaf);
+    this.book.classList.add('flipping');
+    const dur = 720, ease = 'cubic-bezier(.45,.05,.25,1)';
+    this.anim = leaf.animate([
+      { transform: 'rotateY(' + from + 'deg) scaleY(1)' },
+      { transform: 'rotateY(' + ((from + to) / 2) + 'deg) scaleY(1.004)', offset: 0.5 },
+      { transform: 'rotateY(' + to + 'deg) scaleY(1)' }
+    ], { duration: dur, easing: ease, fill: 'forwards' });
+    const sh = (el, frames) => { const s = el.querySelector('.rd-shade'); if (s) s.animate(frames, { duration: dur, easing: ease, fill: 'forwards' }); };
+    const opening = from === -180;
+    sh(front, opening ? [{ opacity: 0.55 }, { opacity: 0.15, offset: 0.5 }, { opacity: 0 }] : [{ opacity: 0 }, { opacity: 0.35, offset: 0.5 }, { opacity: 0.6 }]);
+    sh(back, [{ opacity: 0.55 }, { opacity: 0.2, offset: 0.5 }, { opacity: 0 }]);
+    if (under) sh(under, [{ opacity: 0.45 }, { opacity: 0.12, offset: 0.6 }, { opacity: 0 }]);
+    const done = () => { if (this.anim !== anim) return; this.anim = null; leaf.remove(); if (under) under.remove(); this.book.classList.remove('flipping'); this.goto(target, false); };
+    const anim = this.anim; anim.onfinish = done; anim.oncancel = done;
+    // números y contador ya muestran la página a la que vas
+    const a = target + 1, b = Math.min(this.total, target + sp);
+    this.count.textContent = (a === b ? 'Página ' + a : 'Páginas ' + a + '–' + b) + ' de ' + this.total;
+  },
   goto(n, anim, dir) {
     if (!this.flow) return;
     n = Math.max(0, Math.min(this.total - 1, n));
     if (this.spread === 2) n -= n % 2;
-    const moved = n !== this.idx;
     this.idx = n;
-    this.flow.style.transition = anim && moved ? 'transform .55s cubic-bezier(.25,.75,.25,1)' : 'none';
+    this.flow.style.transition = 'none';
     this.flow.style.transform = 'translateX(' + (-n * this.stride) + 'px)';
-    if (anim && moved) {
-      this.turn.className = 'rd-turn ' + ((dir || 1) > 0 ? 'fwd' : 'back');
-      void this.turn.offsetWidth; this.turn.classList.add('go');
-    }
     const a = n + 1, b = Math.min(this.total, n + this.spread);
     this.nums.textContent = '';
     for (let i = a; i <= b; i++) this.nums.append(h('span', { text: String(i) }));
     this.count.textContent = (a === b ? 'Página ' + a : 'Páginas ' + a + '–' + b) + ' de ' + this.total;
     this.range.value = String(a);
     // capítulo de la página
-    setTimeout(() => { const pid = this.anchor(); const p = pid && this.flow.querySelector('[data-pid="' + pid + '"]'); const s = p && p.closest('section'); const c = s && App.chapterList().find(x => x.id === s.dataset.cid); this.where.textContent = c ? ' · ' + (c.title || Pages.label(c)) : ''; }, anim ? 560 : 0);
+    setTimeout(() => { const pid = this.anchor(); const p = pid && this.flow.querySelector('[data-pid="' + pid + '"]'); const s = p && p.closest('section'); const c = s && App.chapterList().find(x => x.id === s.dataset.cid); this.where.textContent = c ? ' · ' + (c.title || Pages.label(c)) : ''; }, 0);
   },
   edit(cid, pid) {
     this.close();

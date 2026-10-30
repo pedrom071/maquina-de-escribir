@@ -120,6 +120,9 @@ const Editor = {
     if (RT.canWrite) tools.append(btn([icon('spark'), h('span', { class: 'lbl', text: 'Revisar' })], (e) => this.reviewMenu(e.currentTarget), 'small'));
     if ((App.P() || {}).kind === 'poesia') tools.append(btn([icon('metro'), h('span', { class: 'lbl', text: 'Métrica' })], () => Metrica.open(), 'small'));
     tools.append(btn([icon('eye'), h('span', { class: 'lbl', text: 'Ver' })], (e) => this.viewMenu(e.currentTarget), 'small'));
+    tools.append(h('div', { class: 'focus-sw', role: 'group', 'aria-label': 'Modo foco' },
+      h('button', { type: 'button', title: 'Modo foco (' + keys('mod', '.') + ')', onclick: () => this.setFocus(true) }, icon('foco'), h('span', { class: 'lbl', text: 'Foco' })),
+      h('button', { type: 'button', title: 'Ultra foco: solo escribir, sin marcas ni revisión (' + keys('mod', 'shift', '.') + ')', onclick: () => this.setUltra(true) }, icon('ultra'), h('span', { class: 'lbl', text: 'Ultra' }))));
     tools.append(ibtn('leer', 'Leer como libro (' + keys('mod', 'shift', 'L') + ')', () => Lectura.open(this.cid)));
     tools.append(ibtn('clock', 'Historial de versiones', () => Versions.open(this.cid)));
     tools.append(ibtn('more', 'Más opciones', (e) => this.moreMenu(e.currentTarget)));

@@ -45,9 +45,8 @@ const Lectura = {
       this.flow.append(sec);
     });
     this.clip = h('div', { class: 'rd-clip' }, this.flow);
-    this.turn = h('div', { class: 'rd-turn', 'aria-hidden': 'true' });
     this.nums = h('div', { class: 'rd-nums', 'aria-hidden': 'true' });
-    this.book = h('div', { class: 'rd-book' }, this.clip, this.turn, this.nums);
+    this.book = h('div', { class: 'rd-book' }, this.clip, this.nums);
     const prev = h('button', { type: 'button', class: 'rd-arrow prev', 'aria-label': 'Página anterior', onclick: () => this.go(-1) }, '‹');
     const next = h('button', { type: 'button', class: 'rd-arrow next', 'aria-label': 'Página siguiente', onclick: () => this.go(1) }, '›');
     this.range = h('input', { type: 'range', min: '1', max: '1', value: '1', 'aria-label': 'Página' });
@@ -82,6 +81,8 @@ const Lectura = {
   layout(keep, cid, pid) {
     if (!this.el) return;
     const anchor = keep ? this.anchor() : null;
+    this.layoutId = (this.layoutId || 0) + 1;
+    if (this.anim) { try { this.anim.finish(); } catch (e) {} }
     const pr = this.prefs();
     const vw = window.innerWidth, vh = window.innerHeight;
     // la hoja y la letra son las de tu apariencia (ancho de hoja, márgenes, tamaño e interlineado);
@@ -137,26 +138,74 @@ const Lectura = {
     for (const p of ps) { const r = p.getBoundingClientRect(); if (r.left >= br.left - 2 && r.left < br.right) return p.dataset.pid; }
     return null;
   },
-  go(dir) { this.goto(this.idx + dir * this.spread, this.prefs().anim, dir); },
+  go(dir) {
+    const n = this.idx, sp = this.spread;
+    let t = Math.max(0, Math.min(this.total - 1, n + dir * sp)); if (sp === 2) t -= t % 2;
+    if (t === n) return;
+    if (this.prefs().anim && !matchMedia('(prefers-reduced-motion: reduce)').matches) this.flip(dir, t);
+    else this.goto(t, false);
+  },
+  /* Copias del texto para las caras de la hoja que gira (se rehacen al cambiar el tamaño). */
+  ensureClones() {
+    if (this.clones && this.clonesFor === this.layoutId) return;
+    const mk = () => { const f = this.flow.cloneNode(true); f.style.transition = 'none'; f.style.transform = 'none'; f.setAttribute('aria-hidden', 'true'); return f; };
+    this.clones = [mk(), mk(), mk()]; this.clonesFor = this.layoutId;
+  },
+  face(page, k, cls) {
+    const f = h('div', { class: 'rd-face ' + (cls || '') });
+    f.style.padding = this.clip.style.padding;
+    if (page != null && page >= 0 && page < this.total) { const c = this.clones[k]; c.style.transform = 'translateX(' + (-page * this.stride) + 'px)'; f.append(c); }
+    f.append(h('div', { class: 'rd-shade' }));
+    return f;
+  },
+  /* Vuelta de hoja: la página gira sobre el lomo como en un libro de papel. */
+  flip(dir, target) {
+    if (this.anim) { try { this.anim.finish(); } catch (e) {} }
+    this.ensureClones();
+    const n = this.idx, sp = this.spread, W = this.stride, H = this.book.clientHeight;
+    const leaf = h('div', { class: 'rd-leaf' });
+    leaf.style.width = W + 'px'; leaf.style.height = H + 'px';
+    let under = null, front, back, from, to, left, origin;
+    if (sp === 2 && dir > 0) { left = W; origin = 'left center'; front = this.face(n + 1, 0, 'front'); back = this.face(n + 2, 1, 'back'); under = this.face(n + 3, 2, 'under'); from = 0; to = -180; }
+    else if (sp === 2) { left = 0; origin = 'right center'; front = this.face(n, 0, 'front'); back = this.face(target + 1, 1, 'back'); under = this.face(target, 2, 'under'); from = 0; to = 180; }
+    else if (dir > 0) { left = 0; origin = 'left center'; front = this.face(n, 0, 'front'); back = this.face(null, 1, 'back blank'); under = this.face(target, 2, 'under'); from = 0; to = -180; }
+    else { left = 0; origin = 'left center'; front = this.face(target, 0, 'front'); back = this.face(null, 1, 'back blank'); from = -180; to = 0; }
+    leaf.style.left = left + 'px'; leaf.style.transformOrigin = origin;
+    leaf.append(front, back);
+    if (under) { under.style.left = left + 'px'; under.style.width = W + 'px'; under.style.height = H + 'px'; this.book.append(under); }
+    this.book.append(leaf);
+    this.book.classList.add('flipping');
+    const dur = 720, ease = 'cubic-bezier(.45,.05,.25,1)';
+    this.anim = leaf.animate([
+      { transform: 'rotateY(' + from + 'deg) scaleY(1)' },
+      { transform: 'rotateY(' + ((from + to) / 2) + 'deg) scaleY(1.004)', offset: 0.5 },
+      { transform: 'rotateY(' + to + 'deg) scaleY(1)' }
+    ], { duration: dur, easing: ease, fill: 'forwards' });
+    const sh = (el, frames) => { const s = el.querySelector('.rd-shade'); if (s) s.animate(frames, { duration: dur, easing: ease, fill: 'forwards' }); };
+    const opening = from === -180;
+    sh(front, opening ? [{ opacity: 0.55 }, { opacity: 0.15, offset: 0.5 }, { opacity: 0 }] : [{ opacity: 0 }, { opacity: 0.35, offset: 0.5 }, { opacity: 0.6 }]);
+    sh(back, [{ opacity: 0.55 }, { opacity: 0.2, offset: 0.5 }, { opacity: 0 }]);
+    if (under) sh(under, [{ opacity: 0.45 }, { opacity: 0.12, offset: 0.6 }, { opacity: 0 }]);
+    const done = () => { if (this.anim !== anim) return; this.anim = null; leaf.remove(); if (under) under.remove(); this.book.classList.remove('flipping'); this.goto(target, false); };
+    const anim = this.anim; anim.onfinish = done; anim.oncancel = done;
+    // números y contador ya muestran la página a la que vas
+    const a = target + 1, b = Math.min(this.total, target + sp);
+    this.count.textContent = (a === b ? 'Página ' + a : 'Páginas ' + a + '–' + b) + ' de ' + this.total;
+  },
   goto(n, anim, dir) {
     if (!this.flow) return;
     n = Math.max(0, Math.min(this.total - 1, n));
     if (this.spread === 2) n -= n % 2;
-    const moved = n !== this.idx;
     this.idx = n;
-    this.flow.style.transition = anim && moved ? 'transform .55s cubic-bezier(.25,.75,.25,1)' : 'none';
+    this.flow.style.transition = 'none';
     this.flow.style.transform = 'translateX(' + (-n * this.stride) + 'px)';
-    if (anim && moved) {
-      this.turn.className = 'rd-turn ' + ((dir || 1) > 0 ? 'fwd' : 'back');
-      void this.turn.offsetWidth; this.turn.classList.add('go');
-    }
     const a = n + 1, b = Math.min(this.total, n + this.spread);
     this.nums.textContent = '';
     for (let i = a; i <= b; i++) this.nums.append(h('span', { text: String(i) }));
     this.count.textContent = (a === b ? 'Página ' + a : 'Páginas ' + a + '–' + b) + ' de ' + this.total;
     this.range.value = String(a);
     // capítulo de la página
-    setTimeout(() => { const pid = this.anchor(); const p = pid && this.flow.querySelector('[data-pid="' + pid + '"]'); const s = p && p.closest('section'); const c = s && App.chapterList().find(x => x.id === s.dataset.cid); this.where.textContent = c ? ' · ' + (c.title || Pages.label(c)) : ''; }, anim ? 560 : 0);
+    setTimeout(() => { const pid = this.anchor(); const p = pid && this.flow.querySelector('[data-pid="' + pid + '"]'); const s = p && p.closest('section'); const c = s && App.chapterList().find(x => x.id === s.dataset.cid); this.where.textContent = c ? ' · ' + (c.title || Pages.label(c)) : ''; }, 0);
   },
   edit(cid, pid) {
     this.close();
