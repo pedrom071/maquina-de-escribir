@@ -96,12 +96,13 @@ const Habit = {
       const s = this.streaks(map), sm = this.summary(map);
       body.textContent = '';
       const tiles = h('div', { class: 'tiles habit-tiles' });
-      const tile = (v, k, cls) => tiles.append(h('div', { class: 'tile ' + (cls || '') }, h('div', { class: 'v', text: v }), h('div', { class: 'k', text: k })));
-      tile(fmtN(s.cur), s.cur === 1 ? 'día de racha' : 'días de racha', s.cur ? 'on' : '');
-      tile(fmtN(s.best), 'mejor racha');
-      tile(fmtN(sm.days30) + '/30', 'días escritos de los últimos 30');
-      tile(fmtN(sm.w7), 'palabras en 7 días');
-      tile(fmtN(sm.avgDay), 'promedio por día escrito');
+      const tile = (v, k, cls, tip) => tiles.append(tipify(h('div', { class: 'tile ' + (cls || '') }, h('div', { class: 'v', text: v }), h('div', { class: 'k', text: k })), tip));
+      const g = this.goal();
+      tile(fmtN(s.cur), s.cur === 1 ? 'día de racha' : 'días de racha', s.cur ? 'on' : '', 'Días seguidos en que escribiste' + (g ? ' al menos ' + fmtN(g) + ' palabras (tu meta diaria)' : ' algo') + '. Si hoy todavía no escribes, la racha sigue viva hasta medianoche.');
+      tile(fmtN(s.best), 'mejor racha', '', 'La racha más larga que tienes registrada.');
+      tile(fmtN(sm.days30) + '/30', 'días escritos de los últimos 30', '', 'En cuántos de los últimos 30 días sumaste palabras. Más que la cantidad, muestra la constancia.');
+      tile(fmtN(sm.w7), 'palabras en 7 días', '', 'Palabras netas de la última semana: lo que agregaste menos lo que borraste.');
+      tile(fmtN(sm.avgDay), 'promedio por día escrito', '', 'Cuánto escribes, en promedio, los días que sí escribes (los últimos 30). No cuenta los días en blanco.');
       body.append(h('p', { class: 'habit-nudge', text: this.nudge(s, sm) }), tiles);
       body.append(h('div', { class: 'heat-wrap' }, this.heat(map, opts.weeks || 26), h('div', { class: 'heat-legend' }, h('span', { text: 'menos' }), ...[0, 1, 2, 3, 4].map(i => h('i', { class: 'h' + i })), h('span', { text: 'más' + (this.goal() ? ' (meta: ' + fmtN(this.goal()) + ')' : '') }))));
       // cuándo escribes

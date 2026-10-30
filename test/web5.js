@@ -53,6 +53,19 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   console.log(st.split('\n').slice(0, 30).map(x => '     ' + x).join('\n'));
   ok(/Legibilidad/i.test(st), 'panel de estilo con legibilidad');
   ok(/Riqueza léxica/i.test(st), 'riqueza léxica');
+  // explicaciones al pasar el cursor y guía
+  await pg.locator('.style-cell').first().scrollIntoViewIfNeeded(); await sleep(100);
+  let cellBox = await pg.locator('.style-cell').first().boundingBox();
+  await pg.mouse.move(cellBox.x + 20, cellBox.y + 20); await sleep(250);
+  const tipVis = await pg.evaluate(() => { const t = document.querySelector('.style-cell .tip'); const cs = getComputedStyle(t); return cs.visibility === 'visible' && +cs.opacity > 0.9 ? t.textContent : ''; });
+  ok(/Fernández Huerta/.test(tipVis), 'al pasar el cursor se explica la legibilidad');
+  await pg.evaluate(() => { document.querySelector('.style-guide').open = true; document.querySelector('.style-guide').scrollIntoView(); }); await sleep(150);
+  const guide = await pg.evaluate(() => document.querySelector('.style-guide').innerText);
+  ok(/1959/.test(guide) && /206,84/.test(guide) && /tu texto/.test(guide), 'guía con Fernández Huerta, fórmula y escala');
+  await pg.locator('.style-cell').nth(4).scrollIntoViewIfNeeded(); await sleep(100);
+  cellBox = await pg.locator('.style-cell').nth(4).boundingBox();
+  await pg.mouse.move(cellBox.x + 20, cellBox.y + 20); await sleep(250);
+  await pg.screenshot({ path: path.resolve(__dirname, '_tips.png'), fullPage: false });
   await pg.screenshot({ path: path.resolve(__dirname, '_style.png'), fullPage: true });
   const syl = await pg.evaluate(() => ['camión', 'poeta', 'ciudad', 'oído', 'aéreo', 'queso', 'guerra', 'pingüino', 'murciélago'].map(w => w + '=' + syllables(w)).join(' '));
   ok(syl === 'camión=2 poeta=3 ciudad=2 oído=3 aéreo=4 queso=2 guerra=2 pingüino=3 murciélago=4', 'sílabas: ' + syl);
