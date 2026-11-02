@@ -208,6 +208,7 @@ const Editor = {
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },
       { label: 'Exportar este ' + App.unit().toLowerCase(), onClick: () => IO.openExport(App.pid, this.cid) },
+      { label: 'Maqueta de libro: tamaño, letra y PDF', onClick: () => Maqueta.open() },
       { label: 'Crear documento en Claude Docs', disabled: !RT.docs, onClick: () => IO.toClaudeDocs(this.cid) }
     ];
     if (window.Collab && Collab.canSendState) items.push({ label: 'Conversar sobre este texto en el chat', onClick: () => Collab.sendChapter(this.cid) });

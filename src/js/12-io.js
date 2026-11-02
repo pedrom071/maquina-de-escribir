@@ -78,6 +78,7 @@ const IO = {
       ['html', 'Página web (.html)', 'Lista para leer en el navegador.'],
       ['json', 'Respaldo completo (.json)', 'Todo el proyecto con biblia y notas; se puede volver a importar.']
     ];
+    if (!one) opts.push(['libro', 'Libro (maqueta y PDF)', 'Elige tamaño de libro, márgenes y letra, mira cómo queda página a página y descárgalo en PDF.']);
     if (RT.drive) opts.push(['drive', 'Google Docs', 'Crea un documento nuevo en tu Google Drive.']);
     if (RT.docs) opts.push(['claudedocs', 'Claude Docs', 'Crea un documento en Claude Docs (hasta unas 5.000 palabras).']);
     const grid = h('div', { class: 'kinds', role: 'radiogroup', 'aria-label': 'Formato' });
@@ -94,7 +95,7 @@ const IO = {
         h('label', { class: 'field' }, h('span', { text: 'Qué exportar' }), scopeSel),
         h('div', { class: 'field' }, h('span', { text: 'Formato' }), grid),
         h('label', { class: 'row', style: 'font-size:.875rem' }, nb, h('span', { text: 'Incluir las notas del corrector (en Word, como comentarios)' }))),
-      buttons: [{ label: 'Cancelar' }, { label: 'Exportar', cls: 'primary', onClick: () => { scope = scopeSel.value; this.doExport(fmt, scope === 'chapter' ? (cid || App.cid) : null, notes); } }]
+      buttons: [{ label: 'Cancelar' }, { label: 'Exportar', cls: 'primary', onClick: () => { scope = scopeSel.value; if (fmt === 'libro') { setTimeout(() => Maqueta.open(), 50); return; } this.doExport(fmt, scope === 'chapter' ? (cid || App.cid) : null, notes); } }]
     });
   },
   async doExport(fmt, cid, notes) {
@@ -155,6 +156,7 @@ const IO = {
   },
   async toDocx(P, chs, notes, one) {
     await loadScript('jszip');
+    const LY = this._layout || null; const tw = (cm) => Math.round(cm * 567);
     const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
     const run = (t) => '<w:r><w:t xml:space="preserve">' + xesc(t) + '</w:t></w:r>';
     const comments = [];
@@ -182,12 +184,16 @@ const IO = {
       });
     });
     const doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="' + W + '"><w:body>' + body +
-      '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1418" w:right="1418" w:bottom="1418" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
+      (LY ? '<w:sectPr><w:pgSz w:w="' + tw(LY.w) + '" w:h="' + tw(LY.h) + '"/><w:pgMar w:top="' + tw(LY.top) + '" w:right="' + tw(LY.outer) + '" w:bottom="' + tw(LY.bottom) + '" w:left="' + tw(LY.inner) + '" w:header="' + tw(LY.top * 0.45) + '" w:footer="' + tw(LY.bottom * 0.4) + '" w:gutter="0"/></w:sectPr>'
+        : '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1418" w:right="1418" w:bottom="1418" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>') + '</w:body></w:document>';
     const bloque = P.style && P.style.paragraph === 'bloque';
+    // con «Word con este formato» (desde la maqueta): tamaño de página, márgenes espejo, letra e interlineado del libro
+    const fontN = LY ? LY.font : 'Times New Roman', szV = LY ? Math.round(LY.pt * 2) : 24, lineV = LY ? Math.round(LY.leading * 240) : 360;
+    const indV = LY ? Math.round(LY.indent * LY.pt * 20) : 567;
     const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="' + W + '">' +
-      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="es-CL"/></w:rPr></w:rPrDefault>' +
-      '<w:pPrDefault><w:pPr><w:spacing w:after="' + (bloque ? '200' : '0') + '" w:line="360" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
-      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr>' + (bloque ? '' : '<w:ind w:firstLine="567"/>') + '<w:jc w:val="both"/></w:pPr></w:style>' +
+      '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="' + xesc(fontN) + '" w:hAnsi="' + xesc(fontN) + '" w:cs="' + xesc(fontN) + '" w:eastAsia="' + xesc(fontN) + '"/><w:sz w:val="' + szV + '"/><w:szCs w:val="' + szV + '"/><w:lang w:val="es-CL"/></w:rPr></w:rPrDefault>' +
+      '<w:pPrDefault><w:pPr><w:spacing w:after="' + (bloque ? '200' : '0') + '" w:line="' + lineV + '" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr>' + (bloque ? '' : '<w:ind w:firstLine="' + indV + '"/>') + '<w:jc w:val="' + (LY && !LY.justify ? 'left' : 'both') + '"/></w:pPr></w:style>' +
       '<w:style w:type="paragraph" w:styleId="SinSangria"><w:name w:val="Sin sangría"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:firstLine="0"/></w:pPr></w:style>' +
       '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="2400" w:after="1200"/><w:ind w:firstLine="0"/><w:jc w:val="center"/></w:pPr><w:rPr><w:sz w:val="52"/><w:szCs w:val="52"/></w:rPr></w:style>' +
       '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="SinSangria"/><w:qFormat/><w:pPr><w:keepNext/><w:pageBreakBefore/><w:spacing w:before="1200" w:after="600"/><w:ind w:firstLine="0"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:sz w:val="34"/><w:szCs w:val="34"/></w:rPr></w:style>' +
@@ -198,9 +204,10 @@ const IO = {
     const zip = new JSZip();
     zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' + (comments.length ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>');
     zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>');
-    zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' + (comments.length ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') + '</Relationships>');
+    zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' + (LY ? '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' : '') + (comments.length ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') + '</Relationships>');
     zip.file('word/document.xml', doc);
     zip.file('word/styles.xml', styles);
+    if (LY) zip.file('word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="' + W + '"><w:mirrorMargins/><w:autoHyphenation w:val="' + (LY.justify ? 'true' : 'false') + '"/></w:settings>');
     if (comments.length) {
       zip.file('word/comments.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments xmlns:w="' + W + '">' + comments.map(c =>
         '<w:comment w:id="' + c.id + '" w:author="' + xesc(c.author) + '" w:date="' + c.date + '" w:initials="' + xesc((c.author || 'C').slice(0, 2)) + '">' +

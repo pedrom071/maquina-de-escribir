@@ -246,7 +246,7 @@ const App = {
     return card;
   },
   projectMenu(a, d, space) {
-    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }, { label: 'Leer como libro', onClick: () => { this.go('p-' + d.id); setTimeout(() => Lectura.open(), 500); } }];
+    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }, { label: 'Leer como libro', onClick: () => { this.go('p-' + d.id); setTimeout(() => Lectura.open(), 500); } }, { label: 'Maqueta de libro (PDF)', onClick: () => { this.go('p-' + d.id); setTimeout(() => Maqueta.open(), 500); } }];
     if (this.colls.team && this.colls.mine) {
       if (space === 'mine') items.push({ label: 'Compartir con el equipo', onClick: () => this.moveProject(d.id, 'team') });
       else { items.push({ label: 'Hacer una copia privada', onClick: () => this.moveProject(d.id, 'mine', true) }); items.push({ label: 'Mover a mis proyectos', onClick: () => this.moveProject(d.id, 'mine') }); }
@@ -542,6 +542,7 @@ const App = {
     const ior = h('div', { class: 'row', style: 'padding:0 .3rem' });
     if (RT.canWrite) ior.append(btn('Importar', () => IO.openImport(this.pid), 'small'));
     ior.append(btn('Exportar', () => IO.openExport(this.pid, null), 'small'));
+    ior.append(btn('Maqueta', () => Maqueta.open(), 'small'));
     io.append(ior);
     side.append(io);
     side.scrollTop = keepScroll;

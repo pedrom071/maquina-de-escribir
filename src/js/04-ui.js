@@ -13,6 +13,7 @@ const ICONS = {
   idea: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   foco: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/>',
   ultra: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   book: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
   graph: '<circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 8.3l2.6 7.4M15.8 8.3l-2.6 7.4M8.5 7h7"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
