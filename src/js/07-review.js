@@ -121,6 +121,14 @@ const Review = {
     if (c === 'prompt_too_large') { App.toast('El texto es demasiado largo para revisarlo de una vez.'); return; }
     App.toast('La revisión no se completó. Intenta de nuevo.');
   },
+  /* Huella del texto de un párrafo: si no cambió desde la última revisión con IA, sus marcas se conservan. */
+  fp(t) { let h = 5381; const s = fold(String(t || '')).replace(/\s+/g, ' ').trim(); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); },
+  /* Observaciones anteriores de la IA sobre el párrafo (para no cambiar de criterio sin motivo). */
+  prevObs(p) { const out = []; p.segs.forEach(s => { if (s.m && s.m.by === 'claude' && !s.m.done) out.push({ id: 'R' + (out.length + 1), m: s.m }); }); return out; },
+  prevLines(prev) { return prev.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '')).join('\n'); },
+  prevRules() { return 'Tus observaciones anteriores sobre este texto vienen etiquetadas (R1, R2…). Sé consistente: si una sigue siendo válida, repítela con "prev" igual a su etiqueta y con el mismo criterio (puedes ajustar el fragmento si cambió); si el texto ya la resolvió, omítela. No cambies de opinión sobre frases que no cambiaron.'; },
+  rejectedIn(d, text) { const ft = fold(text || ''); return (d.data.rejected || []).filter(r => r.x && ft.includes(r.x)); },
+  rejLines(rej) { return rej.slice(0, 20).map(r => '- ' + r.t + ' · «' + r.x + '»').join('\n'); },
   integrate(P) { return !(P && P.review && P.review.integrate === false); },
   /* Marcas de la revisión automática que la IA puede confirmar o descartar. */
   autoObs(p, protectedIds, prefix) {
@@ -147,9 +155,14 @@ const Review = {
     const findObs = (ref) => { ref = String(ref || '').trim().toUpperCase(); return ref ? obs.find(z => z.id.toUpperCase() === ref || z.id.toUpperCase().endsWith('.' + ref)) : null; };
     const discards = new Set(), confirmed = new Set();
     const marks = [];
+    const prevs = this.prevObs(np);
+    const rejected = (x.rejected || []);
+    const isRejected = (it) => rejected.some(r => r.x && r.t === it.type && fold(it.text || '') === r.x);
     list.forEach(it => {
       if (!it) return;
       if (it.descartar) { const o = findObs(it.descartar); if (o) discards.add(o.m.id); return; }
+      if (it.prev) { const pv = prevs.find(z => z.id.toUpperCase() === String(it.prev).trim().toUpperCase().split('.').pop()); if (pv) { if (!it.type) it.type = pv.m.type; if (!it.note) it.note = pv.m.note; if (!it.text || parText(np).indexOf(it.text) < 0) it.text = pv.m.text; } }
+      if (isRejected(it)) return;
       const o = typeof it.auto === 'string' ? findObs(it.auto) : null;
       if (o) { confirmed.add(o.m.id); if (!it.text) it.text = o.m.text; if (!it.type) it.type = o.m.type; if (it.fix == null && o.m.fix) it.fix = o.m.fix.to; }
       marks.push({ it: it, o: o });
@@ -167,6 +180,7 @@ const Review = {
       const words = gone.filter(o => o.m.rule === 'spell' && o.m.word).map(o => o.m.word);
       if (words.length) x.okWords = Array.from(new Set((x.okWords || []).concat(words))).slice(-300);
     }
+    np.rv = this.fp(parText(np));
     x.paras[k] = np;
     return { added: added, removed: removed };
   },
@@ -205,10 +219,13 @@ const Review = {
     const kept = p.segs.filter(s => s.m && !isStale(s.m, protectedIds) && !(integ && isStale(s.m, protectedIds, 'revisor'))).map(s => s.m.text);
     const maxN = (DENSITY[(P.review && P.review.density) || 'normal'] || 5) + obs.length;
     const bible = bibleDigest(P, 3500);
+    const prevO = this.prevObs(p), rejO = this.rejectedIn(d, full);
     const prompt = [
       this.baseRules(P),
       'Revisa SOLO el párrafo indicado, con detalle. Hasta ' + maxN + ' marcas propias. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
       obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
+      prevO.length ? this.prevRules() + '\nObservaciones anteriores:\n' + this.prevLines(prevO) : '',
+      rejO.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejO) : '',
       'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"},{"descartar":"A2","por":"nombre propio"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
@@ -256,12 +273,18 @@ const Review = {
   },
 
   /* revisión completa del capítulo, en una o pocas llamadas */
-  async reviewChapter(cid) {
+  async reviewChapter(cid, again) {
     if (!this.ok()) return;
     if (this.running) { App.toast('Espera a que termine la revisión en curso.'); return; }
     const d = App.ch(cid), P = App.P(); if (!d || !d.data) return;
-    const paras = d.data.paras.filter(p => parText(p).trim());
-    if (!paras.length) { App.toast('No hay texto que revisar.'); return; }
+    const all = d.data.paras.filter(p => parText(p).trim());
+    if (!all.length) { App.toast('No hay texto que revisar.'); return; }
+    // consistencia: lo que no cambió desde la última revisión conserva sus marcas
+    const changed = again ? all : all.filter(p => p.rv !== this.fp(parText(p)));
+    if (!changed.length) { App.toast('Nada cambió desde la última revisión con IA: las marcas siguen igual.', { action: { label: 'Revisar todo de nuevo', fn: () => this.reviewChapter(cid, true) } }); return; }
+    const ctxIds = new Set();
+    if (changed.length < all.length) changed.forEach(p => { const i = all.indexOf(p); [all[i - 1], all[i + 1]].forEach(q => { if (q && !changed.includes(q)) ctxIds.add(q.id); }); });
+    const paras = all.filter(p => changed.includes(p) || ctxIds.has(p.id));
     const chunks = []; let cur = [], size = 0;
     // tramos moderados: con textos muy largos de una vez la revisión se vuelve superficial
     paras.forEach(p => { const t = parText(p); if (size + t.length > 12000 && cur.length) { chunks.push(cur); cur = []; size = 0; } cur.push(p); size += t.length; });
@@ -277,16 +300,23 @@ const Review = {
     try {
       for (let ci = 0; ci < chunks.length; ci++) {
         const ch = chunks[ci];
-        const labels = new Map(); ch.forEach((p, i) => labels.set('P' + (i + 1), p.id));
+        const labels = new Map(); let li = 0; const lab = new Map();
+        ch.forEach(p => { if (!ctxIds.has(p.id)) { li++; labels.set('P' + li, p.id); lab.set(p.id, 'P' + li); } });
         const integ = this.integrate(P);
         const obsBy = new Map(); let nObs = 0;
-        if (integ) ch.forEach((p, i) => { const o = this.autoObs(p, protectedIds, 'P' + (i + 1) + '.'); if (o.length) { obsBy.set(p.id, o); nObs += o.length; } });
-        const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p) + (obsBy.has(p.id) ? '\n  Observaciones automáticas:\n  ' + this.obsLines(obsBy.get(p.id)).replace(/\n/g, '\n  ') : '')).join('\n\n');
-        const maxT = Math.min(140, Math.max(6, Math.round(ch.length * per)));
+        if (integ) ch.forEach(p => { if (!lab.has(p.id)) return; const o = this.autoObs(p, protectedIds, lab.get(p.id) + '.'); if (o.length) { obsBy.set(p.id, o); nObs += o.length; } });
+        const prevBy = new Map(); ch.forEach(p => { if (!lab.has(p.id)) return; const pv = this.prevObs(p).map(o => ({ id: lab.get(p.id) + '.' + o.id, m: o.m })); if (pv.length) prevBy.set(p.id, pv); });
+        const rejAll = []; ch.forEach(p => { if (lab.has(p.id)) this.rejectedIn(d, parText(p)).forEach(r => rejAll.push(r)); });
+        const body = ch.map(p => lab.has(p.id)
+          ? '[' + lab.get(p.id) + '] ' + parText(p) + (obsBy.has(p.id) ? '\n  Observaciones automáticas:\n  ' + this.obsLines(obsBy.get(p.id)).replace(/\n/g, '\n  ') : '') + (prevBy.has(p.id) ? '\n  Observaciones anteriores:\n  ' + this.prevLines(prevBy.get(p.id)).replace(/\n/g, '\n  ') : '')
+          : '(contexto, ya revisado; no lo marques) ' + parText(p)).join('\n\n');
+        const maxT = Math.min(140, Math.max(6, Math.round(lab.size * per)));
         const prompt = [
           this.baseRules(P),
           'Revisa todo el texto siguiente, párrafo por párrafo y con detalle. Hasta ' + maxT + ' marcas propias (sin contar las automáticas que confirmes o descartes); no es una cuota, pero no omitas nada que de verdad lo merezca. Indica en "p" la etiqueta del párrafo.',
           nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
+          prevBy.size ? this.prevRules() + ' Las etiquetas llevan el párrafo delante (P3.R1).' : '',
+          rejAll.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejAll) : '',
           'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"},{"p":"P6","descartar":"P6.A2","por":"nombre propio"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body
@@ -299,11 +329,12 @@ const Review = {
         list.forEach(it => {
           if (!it) return;
           let lab = String(it.p || '').trim().toUpperCase();
-          if (!lab && (it.descartar || it.auto)) lab = String(it.descartar || it.auto).toUpperCase().split('.')[0];
+          if (!lab && (it.descartar || it.auto || it.prev)) lab = String(it.descartar || it.auto || it.prev).toUpperCase().split('.')[0];
           const pid = labels.get(lab); if (pid) { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(it); }
         });
         d.update(x => {
           ch.forEach(op => {
+            if (ctxIds.has(op.id)) return;
             const r = this.applyList(x, op.id, byPid.get(op.id) || [], obsBy.get(op.id) || [], P, protectedIds, integ);
             added += r.added; removed += r.removed;
           });
@@ -311,7 +342,7 @@ const Review = {
         this.afterMarks(cid);
       }
       const s = Editor.dirty.get(cid); if (s) s.clear();
-      App.toast(App.unit() + ' revisado: ' + plural(added, 'marca', 'marcas') + (removed ? ' (reemplazó ' + removed + ' anteriores)' : '') + '.');
+      App.toast(App.unit() + ' revisado: ' + plural(added, 'marca', 'marcas') + (changed.length < all.length ? ' en ' + plural(changed.length, 'párrafo cambiado', 'párrafos cambiados') + '; lo demás conserva sus marcas' : '') + '.', changed.length < all.length ? { action: { label: 'Revisar todo de nuevo', fn: () => this.reviewChapter(cid, true) }, ms: 8000 } : undefined);
     } catch (e) { this.fail(e); }
     this.running = null;
     this.afterMarks(cid);

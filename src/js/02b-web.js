@@ -142,13 +142,14 @@ const AI = {
     if (c.provider === 'anthropic') {
       url = 'https://api.anthropic.com/v1/messages';
       headers = { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
-      body = { model: c.model, max_tokens: opts.maxTokens || 4096, messages: msgs, stream: true };
+      body = { model: c.model, max_tokens: opts.maxTokens || 4096, messages: msgs, stream: true, temperature: 0 };
     } else {
       const base = (c.provider === 'openai' ? 'https://api.openai.com/v1' : (c.base || '').replace(/\/+$/, ''));
       url = base + '/chat/completions';
       headers = { 'content-type': 'application/json' };
       if (c.key) headers.authorization = 'Bearer ' + c.key;
       body = { model: c.model, messages: msgs, stream: true };
+      if (/^(gpt-4|gpt-3|llama|mistral|qwen|gemma|deepseek)/i.test(c.model || '') || c.provider !== 'openai') body.temperature = 0;
     }
     let res;
     try { res = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(body), signal: opts.signal }); }

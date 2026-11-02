@@ -164,7 +164,8 @@ const Editor = {
       { label: 'Revisar este párrafo', kbd: keys('mod', 'enter'), onClick: () => { const c = this.lastCaret; const pid = c ? c.pid : (this.cdoc.data.paras[0] || {}).id; Review.reviewPara(this.cid, pid, true); } },
       { label: 'Revisar párrafos editados' + (dirtyN ? ' (' + dirtyN + ')' : ''), kbd: keys('mod', 'shift', 'enter'), disabled: !dirtyN, onClick: () => Review.reviewDirty(this.cid) },
       Pages.pages.length > 1 ? { label: 'Revisar esta página (' + Pages.cur + ')', onClick: () => Pages.reviewAI() } : null,
-      { label: 'Revisar todo el ' + App.unit().toLowerCase(), onClick: () => Review.reviewChapter(this.cid) },
+      { label: 'Revisar el ' + App.unit().toLowerCase() + ' (lo cambiado)', onClick: () => Review.reviewChapter(this.cid) },
+      { label: 'Revisar todo de nuevo', onClick: () => Review.reviewChapter(this.cid, true) },
       { sep: true },
       { label: 'Informe del ' + App.unit().toLowerCase(), onClick: () => Review.report(this.cid) },
       { label: 'Extraer a la biblia', onClick: () => Review.extract(this.cid) },
@@ -463,8 +464,8 @@ const Editor = {
       if (!id || usedP.has(id)) id = uid('p');
       usedP.add(id);
       const segs = []; walk(el, segs);
-      const o = { id: id, segs: normSegs(segs) };
-      const old = oldP.get(id); if (old && old.pb) o.pb = true;
+      const old = oldP.get(id);
+      const o = old ? Object.assign({}, old, { id: id, segs: normSegs(segs) }) : { id: id, segs: normSegs(segs) };
       return o;
     };
     let loose = null;
@@ -921,6 +922,7 @@ const Editor = {
     else if (a === 'del') {
       if (this.confirmDel !== id) { this.confirmDel = id; this.renderNotes(); if (this.narrow) this.renderSheet(); setTimeout(() => { if (this.confirmDel === id) { this.confirmDel = null; this.renderNotes(); } }, 3500); return; }
       this.confirmDel = null;
+      if (m.by === 'claude' || m.by === 'revisor') this.cdoc.update(d => { d.rejected = (d.rejected || []).concat({ t: m.type, x: fold(m.text || ''), r: m.rule || '' }).slice(-300); }, { silent: true });
       this.mutateMark(id, p => { unwrapMark(p, id); }, true);
       if (this.active === id) this.active = null;
     }
