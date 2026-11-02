@@ -195,7 +195,8 @@ const Checker = {
     if (this.on(P, 'name') && nameSet.size) {
       const cands = toks.filter(t => /^\p{Lu}/u.test(t.w) && !t.start && t.w.length >= 4 && !nameSet.has(t.w));
       cands.forEach(t => {
-        for (const nm of nameSet) if (nm.length >= 4 && lev(fold(t.w), fold(nm)) === 1) { add('coh', 'name', t.w, '¿Quisiste decir «' + nm + '»? Así está en la biblia.', nm); break; }
+        // solo si el texto ya usa la otra forma (el texto manda sobre la biblia)
+        for (const nm of nameSet) if (nm.length >= 4 && lev(fold(t.w), fold(nm)) === 1 && (!window.Coherence || Coherence.nameCount(P, nm) >= 2)) { add('coh', 'name', t.w, '¿Quisiste decir «' + nm + '»? Así aparece en el resto del texto.', nm); break; }
       });
     }
     if (this.on(P, 'spell') && Spell.available()) {
@@ -242,6 +243,7 @@ const Checker = {
       results.set(pid, { text: parText(paras[i]), items: items });
     }
     let added = 0, removed = 0;
+    if (window.Coherence && !pids) { try { Coherence.markSeen(P); } catch (e) {} }
     const cur = App.ch(cid); if (!cur || !cur.data) return 0;
     const undoPushed = !quiet && Editor.cid === cid;
     if (undoPushed) Editor.pushUndo();

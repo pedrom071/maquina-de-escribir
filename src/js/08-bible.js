@@ -14,10 +14,22 @@ const Bible = {
     if (!ro) actions.append(btn([icon('plus'), 'Sección'], () => this.addSection()));
     wrap.append(h('div', { class: 'vhead', style: 'margin:0' }, h('div', null, h('h2', { text: 'Biblia' }), h('p', { text: 'Lo que ya está decidido sobre tu mundo. El revisor lo usa para detectar contradicciones.' })), actions));
     const texts = this.chapterTexts();
+    if (!ro && window.Coherence) { Coherence.markSeen(P); const sy = this.syncPanel(P); if (sy) wrap.append(sy); }
     ((P.bible && P.bible.sections) || []).forEach(s => wrap.append(this.section(s, texts, ro)));
     wrap.append(this.threads(P, ro), this.decisions(P, ro));
     this.st.append(wrap);
     $$('textarea', wrap).forEach(autoGrow);
+  },
+  /* El texto manda: cambios del texto que la biblia todavía no refleja. */
+  syncPanel(P) {
+    const list = Coherence.bibleSync(P);
+    if (!list.length) return null;
+    const box = h('div', { class: 'panel bible-sync' }, h('div', { class: 'row', style: 'justify-content:space-between;gap:.6rem' },
+      h('div', null, h('h3', { style: 'margin:0', text: 'Al día con el texto' }), h('p', { class: 'muted', style: 'margin:.2rem 0 0;font-size:.82rem', text: 'El texto manda: estas fichas no coinciden con lo que escribiste (o con lo que borraste).' })),
+      list.length > 1 ? btn('Aplicar todo', () => { list.forEach(sg => Coherence.applySync(sg)); App.toast('Biblia actualizada con el texto.'); this.render(); }, 'small primary') : null));
+    list.forEach(sg => box.append(h('div', { class: 'bs-it' }, h('span', { text: sg.text }),
+      h('div', { class: 'row', style: 'gap:.3rem' }, btn(sg.apply, () => { Coherence.applySync(sg); this.render(); }, 'small'), btn('Mantener', () => { Coherence.ignoreSync(sg); this.render(); }, 'small ghost')))));
+    return box;
   },
   chapterTexts() {
     return App.chapterList().map((c, i) => { const d = App.ch(c.id); return { id: c.id, n: i + 1, title: c.title, text: d && d.data ? fold(d.data.paras.map(parText).join('\n')) : '' }; });

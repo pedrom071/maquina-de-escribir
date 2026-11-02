@@ -19,12 +19,14 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
     s.items.push({ id: 'i1', title: 'Elena', fields: { Edad: '34', 'También llamado': 'Lena' }, body: '' });
     s.items.push({ id: 'i2', title: 'Tomás', fields: { Estado: 'Muerto antes de la historia' }, body: '' });
     s.items.push({ id: 'i3', title: 'Rosa María', fields: {}, body: '' });
+    s.items.push({ id: 'i4', title: 'Pedro', fields: {}, body: '' });
+    s.items.push({ id: 'i5', title: 'Inés', fields: { Edad: '20' }, body: '' });
   }, { now: true }));
   const paras = [
-    'Elena, de cuarenta años, cruzó la plaza. Tomás dijo que la esperaría en el puerto.',
-    'Rosamaría llegó tarde, como siempre. Hacía tres años que no veía a Elena.',
-    'En el muelle estaba Bruno. La tarde olía a sal y Bruno fumaba sin apuro.',
-    'Hablaron de los cuarenta y dos meses que llevaban sin verse. Bruno no dijo nada más.',
+    'Elena, de cuarenta años, cruzó la plaza. Rosamaría la esperaba con Pedro.',
+    'Tomás murió aquel invierno, en el puerto. Hacía tres años que no veía a Elena.',
+    'En el muelle estaba Bruno. La tarde olía a sal y Bruno fumaba sin apuro. Inés tiene 22 años.',
+    'Hablaron de los cuarenta y dos meses que llevaban sin verse. Bruno no dijo nada más. Tomás dijo que volvería.',
     'Todo pasó el jueves 3 de marzo de 2025, cuando cerró el astillero. Elena tiene 34 años y Lena lo sabe.'
   ];
   await pg.evaluate((ps) => App.ch(App.cid).update(x => { x.paras = ps.map((t, i) => ({ id: 'p' + i, segs: [{ t: t }] })); }, { now: true }), paras);
@@ -33,14 +35,30 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   const marks = await pg.evaluate(() => MDE.allMarks(App.ch(App.cid).data).filter(x => x.m.type === 'coh').map(x => ({ rule: x.m.rule, text: x.m.text, note: x.m.note, fix: x.m.fix && x.m.fix.to })));
   marks.forEach(m => console.log('    ', m.rule, '|', m.text, '|', m.note));
   const has = (r, t) => marks.some(m => m.rule === r && m.text === t);
-  ok(has('age', 'Elena, de cuarenta años'), 'edad distinta a la biblia');
-  ok(!marks.some(m => m.rule === 'age' && /34/.test(m.text)), 'edad correcta no se marca');
-  ok(has('dead', 'Tomás dijo'), 'personaje muerto que habla');
-  ok(marks.some(m => m.rule === 'name' && m.text === 'Rosamaría' && m.fix === 'Rosa María'), 'variante de nombre junta/separada');
+  ok(has('age', 'Elena tiene 34 años') && /Antes.*40/.test(marks.find(m => m.rule === 'age').note), 'el texto manda: se marca la edad que contradice lo dicho antes en el texto');
+  ok(!marks.some(m => m.rule === 'age' && /cuarenta/.test(m.text)), 'lo primero que dice el texto no se marca, aunque la biblia diga otra cosa');
+  ok(!marks.some(m => /Inés/.test(m.text)), 'si el texto difiere de la biblia (y no de sí mismo), no se marca el texto');
+  ok(has('dead', 'Tomás dijo'), 'muere en el texto y después habla: se marca');
+  ok(!marks.some(m => m.rule === 'name' && m.text === 'Rosamaría'), 'nombre escrito siempre igual en el texto: no se marca');
   ok(has('noficha', 'Bruno'), 'nombre frecuente sin ficha');
   ok(marks.filter(m => m.rule === 'noficha').length === 1, 'solo una marca por nombre sin ficha');
   ok(marks.some(m => m.rule === 'dur' && /cuarenta y dos meses/.test(m.text)), 'duraciones que no coinciden');
   ok(marks.some(m => m.rule === 'date' && /jueves 3 de marzo de 2025/.test(m.text) && /fue lunes/.test(m.note)), 'día de la semana incorrecto');
+  // la biblia se pone al día con el texto
+  await pg.evaluate(() => App.go('p-' + App.pid + '-biblia')); await sleep(600);
+  let sync = await pg.evaluate(() => Coherence.bibleSync(App.P()).map(x => x.kind + ':' + x.text));
+  console.log('    ', JSON.stringify(sync));
+  ok(sync.some(x => /^age:.*Inés tiene 22/.test(x)) && sync.some(x => /^name:.*Rosamaría/.test(x)), 'la biblia propone tomar la edad y el nombre del texto');
+  ok(!sync.some(x => /^gone/.test(x)), 'fichas que siguen en el texto no se proponen quitar');
+  // borrar a Pedro del texto: la biblia propone quitar su ficha (ya había aparecido)
+  await pg.evaluate(() => App.ch(App.cid).update(x => { x.paras[0] = { id: 'p0', segs: [{ t: 'Elena, de cuarenta años, cruzó la plaza. Rosamaría la esperaba.' }] }; }, { now: true })); await sleep(300);
+  sync = await pg.evaluate(() => Coherence.bibleSync(App.P()).map(x => x.kind + ':' + x.text));
+  ok(sync.some(x => /^gone:.*Pedro/.test(x)), 'al borrar a alguien del texto, la biblia propone quitar su ficha');
+  await pg.evaluate(() => App.renderStage()); await sleep(300);
+  ok(await pg.evaluate(() => !!document.querySelector('.bible-sync') && /Al día con el texto/.test(document.querySelector('.bible-sync').innerText)), 'panel «Al día con el texto» en la biblia');
+  await pg.evaluate(() => { const sg = Coherence.bibleSync(App.P()).find(x => x.kind === 'age'); Coherence.applySync(sg); }); await sleep(200);
+  ok(await pg.evaluate(() => App.P().bible.sections.find(z => z.graph).items.find(i => i.title === 'Inés').fields.Edad === '22'), 'aplicar actualiza la ficha con lo del texto');
+  await pg.evaluate(() => App.go(App.chHash(App.chapterList()[0].id))); await sleep(500);
   // crear ficha desde la nota
   await pg.evaluate(() => { const m = MDE.allMarks(App.ch(App.cid).data).find(x => x.m.rule === 'noficha'); Editor.noteAction('ficha', m.m.id); }); await sleep(300);
   ok(await pg.evaluate(() => App.P().bible.sections.find(z => z.graph).items.some(i => i.title === 'Bruno')), 'ficha creada en Personajes');

@@ -940,3 +940,5 @@ body.ultra .idea-fab.subtle:hover{opacity:.9}
 .ip-empty{font-size:.8rem;color:var(--soft);margin:.5rem .3rem;line-height:1.45}
 body.reading .idea-panel,body.has-drawer .idea-panel{display:none}
 .idea-fab .fab-main[aria-expanded="true"]{box-shadow:0 0 0 3px var(--accent-soft)}
+.bible-sync{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--sheet));display:flex;flex-direction:column;gap:.5rem}
+.bs-it{display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.45rem 0;border-top:1px dashed var(--line2);font-size:.88rem}

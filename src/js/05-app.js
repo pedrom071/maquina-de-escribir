@@ -491,6 +491,7 @@ const App = {
     };
     navItem('escribir', 'Escribir', 'pen', this.cid ? this.chHash(this.cid) : 'p-' + this.pid);
     navItem('biblia', 'Biblia', 'book', 'p-' + this.pid + '-biblia');
+    if (window.Coherence && RT.canWrite && this.chapters && this.chapters.ready) { try { const n = Coherence.bibleSync(P).length; if (n) nav.lastChild.append(h('span', { class: 'nav-n', title: 'La biblia tiene ' + plural(n, 'cambio', 'cambios') + ' pendientes según el texto', text: String(n) })); } catch (e) {} }
     navItem('ideas', 'Ideas', 'idea', 'p-' + this.pid + '-ideas');
     if (window.Ideas && Ideas.coll && Ideas.pid === this.pid) { const n = Ideas.list().filter(x => !x.done).length; const last = nav.lastChild; if (n && last) last.append(h('span', { class: 'nav-n', text: String(n) })); }
     navItem('diagramas', 'Diagramas', 'graph', 'p-' + this.pid + '-diagramas');

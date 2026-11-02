@@ -182,6 +182,7 @@ const Review = {
     const k = kindOf(P);
     return [
       'Eres corrector de continuidad y estilo de un texto en español (' + k.label.toLowerCase() + '). El autor escribe; tú solo señalas. No propongas tramas, escenas, argumentos, giros ni reescrituras de estilo.',
+      'El texto manda sobre la biblia: la biblia es un apoyo que se actualiza con el texto. Si el texto difiere de la biblia, no lo marques como error. Marca coherencia solo cuando algo contradice lo que el propio texto ya estableció antes.',
       'Instrucciones del autor: ' + (P.guide || k.guide),
       'Tipos de marca permitidos:',
       this.allowed(P).map(t => '- ' + TYPE_RULES[t]).join('\n'),
@@ -371,9 +372,9 @@ const Review = {
     UI.drawer({ title: 'Extraer a la biblia', key: 'extract', body: body, foot: foot });
     const fiction = kindOf(P).timeline;
     const prompt = [
-      'Extrae datos FACTUALES que el texto establece (no inventes ni interpretes; no propongas nada creativo). Compara con la biblia y devuelve solo lo nuevo o lo que la complementa.',
+      'Extrae datos FACTUALES que el texto establece (no inventes ni interpretes; no propongas nada creativo). Compara con la biblia y devuelve solo lo nuevo o lo que la complementa. El texto manda: si el texto dice algo distinto de la biblia, propón el cambio en "cambios" para actualizar la biblia.',
       fiction
-        ? 'Responde solo con JSON: {"personajes":[{"nombre":"","datos":["dato breve"]}],"lugares":[{"nombre":"","datos":[""]}],"hechos":[{"titulo":"","cuando":"momento según el texto","nota":""}],"cabos":[{"titulo":"pregunta o promesa abierta","detalle":""}]}'
+        ? 'Responde solo con JSON: {"personajes":[{"nombre":"","datos":["dato breve"]}],"lugares":[{"nombre":"","datos":[""]}],"hechos":[{"titulo":"","cuando":"momento según el texto","nota":""}],"cabos":[{"titulo":"pregunta o promesa abierta","detalle":""}],"cambios":[{"nombre":"nombre de la ficha","campo":"campo o Notas","ahora":"lo que dice el texto","antes":"lo que dice la biblia"}]}'
         : 'Responde solo con JSON: {"ideas":[{"nombre":"idea o tesis","datos":[""]}],"fuentes":[{"nombre":"autor o fuente citada","datos":[""]}],"datos":[{"nombre":"dato o cifra","datos":["fuente si se menciona"]}],"cabos":[{"titulo":"afirmación que necesita respaldo","detalle":""}]}',
       'Máximo 8 elementos por lista. Datos de máximo 15 palabras.',
       '\nBiblia actual:\n' + (bibleDigest(P, 6000) || '(vacía)'),
@@ -400,6 +401,7 @@ const Review = {
     if (fiction) {
       group('Personajes', res && res.personajes, 'char'); group('Lugares', res && res.lugares, 'place');
       group('Hechos para la línea de tiempo', res && res.hechos, 'event'); group('Cabos sueltos', res && res.cabos, 'thread');
+      if (res && Array.isArray(res.cambios)) group('La biblia dice otra cosa: actualizar con lo del texto', res.cambios.map(c => c && ({ nombre: c.nombre, datos: [(c.campo ? c.campo + ': ' : '') + (c.ahora || '') + (c.antes ? ' (antes: ' + c.antes + ')' : '')], campo: c.campo, ahora: c.ahora })), 'change');
     } else {
       group('Ideas y tesis', res && res.ideas, 'idea'); group('Fuentes', res && res.fuentes, 'source');
       group('Datos', res && res.datos, 'data'); group('Afirmaciones por respaldar', res && res.cabos, 'thread');
@@ -422,6 +424,15 @@ const Review = {
         const facts = Array.isArray(it.datos) ? it.datos.filter(Boolean) : [];
         if (p.kind === 'event') { x.timeline = x.timeline || []; x.timeline.push({ id: uid('e'), title: p.name, when: it.cuando || '', chrono: 0, cid: cid, note: it.nota || '' }); n++; return; }
         if (p.kind === 'thread') { x.threads = x.threads || []; x.threads.push({ id: uid('t'), title: p.name, body: (it.detalle || '') + ' (' + title + ')', status: 'open', cid: cid, at: Date.now() }); n++; return; }
+        if (p.kind === 'change') {
+          // el texto manda: se actualiza el campo de la ficha (o se anota en sus notas)
+          const key = fold(p.name); let card = null;
+          (x.bible.sections || []).forEach(s => (s.items || []).forEach(c => { if (!card && (fold(c.title || '') === key || ((c.fields && c.fields['También llamado']) || '').split(',').map(z => fold(z.trim())).includes(key))) card = c; }));
+          if (!card || !it.ahora) return;
+          const f = Object.keys(card.fields || {}).find(k => fold(k) === fold(it.campo || ''));
+          if (f) card.fields[f] = String(it.ahora); else card.body = (card.body ? card.body + '\n' : '') + '• ' + (it.campo ? it.campo + ': ' : '') + it.ahora + ' (' + title + ')';
+          n++; return;
+        }
         const map = { char: [/personaj/i, 'Personajes', true], place: [/lugar|locaci/i, 'Lugares', false], idea: [/idea|tesis|argument/i, 'Ideas clave', false], source: [/fuente/i, 'Fuentes', false], data: [/dato/i, 'Datos', false] }[p.kind];
         const s = secFor(map[0], map[1], map[2]);
         const key = fold(p.name);

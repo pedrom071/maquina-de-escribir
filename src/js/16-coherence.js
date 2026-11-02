@@ -35,11 +35,113 @@ const Coherence = {
         const edadTxt = this.field(it, /^edad/i);
         const edadM = edadTxt.match(new RegExp(NUM_RE, 'iu'));
         const estado = this.field(it, /^estado/i).toLowerCase();
-        out.push({ id: it.id, isChar: isChar, title: title, names: [title].concat(alias), age: edadM ? parseNum(edadM[1]) : null, dead: /\b(muert[oa]|falleci[oó]|fallecid[oa]|murió|difunt[oa])\b/.test(estado) && isChar });
+        out.push({ id: it.id, isChar: isChar, sl: s.label || '', title: title, names: [title].concat(alias), age: edadM ? parseNum(edadM[1]) : null, dead: /\b(muert[oa]|falleci[oó]|fallecid[oa]|murió|difunt[oa])\b/.test(estado) && isChar });
       });
     });
     return out;
   },
+  /* Hechos del proyecto completo, en el orden del libro: edades dichas, muertes y formas de escribir cada nombre. */
+  projectFacts(P) {
+    const chs = App.chapterList();
+    const key = chs.map(c => { const d = App.ch(c.id); return c.id + ':' + (d && d.data ? d.data.paras.length + '.' + d.data.paras.reduce((n, q) => n + parText(q).length, 0) : 0); }).join('|') + '#' + JSON.stringify((P.bible && P.bible.sections || []).map(s => (s.items || []).map(i => i.title + (i.fields ? JSON.stringify(i.fields) : ''))));
+    if (this._pf && this._pfKey === key) return this._pf;
+    const chars = this.chars(P).filter(c => c.isChar);
+    const ages = new Map(), deaths = new Map(), after = [], forms = [];
+    const counts = new Map();
+    const DEATH = (n) => new RegExp('(?:(?<![\\p{L}])' + escRe(n) + '(?:\\s+\\p{L}+){0,3}\\s+(?:murió|falleció|se murió|está muert[oa]|había muerto)(?![\\p{L}])|(?:la muerte|el entierro|el funeral|el velorio|el cadáver|la tumba) de ' + escRe(n) + '(?![\\p{L}]))', 'iu');
+    const ACT = (n) => new RegExp('(?<![\\p{L}])' + escRe(n) + '\\s+(?:dijo|respondió|preguntó|sonrió|gritó|llegó|entró|abrió|miró|caminó|llamó|escribió|contestó|susurró)(?![\\p{L}])', 'gu');
+    chs.forEach((c, ci) => {
+      const d = App.ch(c.id); if (!d || !d.data) return;
+      const where = c.title || Pages.label(c);
+      d.data.paras.forEach((q, qi) => {
+        const t = parText(q); if (!t.trim()) return;
+        chars.forEach(ch => {
+          ch.names.forEach(n => {
+            // edades
+            sentences(t).forEach(sn => {
+              if (/\b(cuando|hace|de niñ|de joven|tendría|tendrá|cumplirá|cumpliría|antes|después|años atrás)\b/i.test(sn)) return;
+              const rr = new RegExp('(?<![\\p{L}])' + escRe(n) + '(?:,\\s*(?:de|con)\\s+|\\s+(?:ya\\s+)?(?:tiene|tenía|cumple|cumplía)\\s+)' + NUM_RE + '\\s+años(?![\\p{L}])', 'gu'); let m;
+              while ((m = rr.exec(sn))) { const v = parseNum(m[1]); if (v == null) continue; if (!ages.has(ch.id)) ages.set(ch.id, []); ages.get(ch.id).push({ pid: q.id, v: v, text: m[0], name: ch.title, where: where }); }
+            });
+            // muertes y lo que pasa después
+            if (!deaths.has(ch.id) && DEATH(n).test(t)) deaths.set(ch.id, { ci: ci, qi: qi, where: where });
+            const dd = deaths.get(ch.id);
+            if (dd && (ci > dd.ci || (ci === dd.ci && qi > dd.qi))) { const ra = ACT(n); let m; while ((m = ra.exec(t))) after.push({ pid: q.id, text: m[0], name: ch.title, where: dd.where }); }
+          });
+          // formas de escribir los nombres compuestos («Rosa María» / «Rosamaría»)
+          ch.names.filter(n => /\s/.test(n)).forEach(n => {
+            const joined = n.replace(/\s+/g, '');
+            [[n, new RegExp('(?<![\\p{L}])' + escRe(n) + '(?![\\p{L}])', 'gu')], [joined, new RegExp('(?<![\\p{L}])' + escRe(joined) + '(?![\\p{L}])', 'giu')]].forEach(([form, re]) => {
+              let m; while ((m = re.exec(t))) { const k = ch.id + '|' + n; if (!counts.has(k)) counts.set(k, { n: n, joined: joined, sep: [], join: [] }); counts.get(k)[form === n ? 'sep' : 'join'].push({ pid: q.id, text: m[0] }); }
+            });
+          });
+        });
+      });
+    });
+    counts.forEach(cn => {
+      if (!cn.sep.length || !cn.join.length) return; // el texto es consistente: manda el texto
+      const main = cn.sep.length >= cn.join.length ? cn.n : cn.join[0].text;
+      (main === cn.n ? cn.join : cn.sep).forEach(x => forms.push({ pid: x.pid, text: x.text, main: main }));
+    });
+    const allText = chs.map(c => { const d = App.ch(c.id); return d && d.data ? d.data.paras.map(parText).join('\n') : ''; }).join('\n');
+    this._pf = { ages: Array.from(ages.values()), after: after, forms: forms, counts: counts, agesBy: ages, deaths: deaths, allText: allText };
+    this._pfKey = key;
+    return this._pf;
+  },
+  /* Veces que un nombre aparece en todo el texto. */
+  nameCount(P, name) { const t = this.projectFacts(P).allText; return (t.match(new RegExp('(?<![\\p{L}])' + escRe(name) + '(?![\\p{L}])', 'gu')) || []).length; },
+  /* Lo que la biblia debería actualizar según el texto (el texto manda). */
+  bibleSync(P) {
+    const out = [];
+    if (!P || !P.bible) return out;
+    const pf = this.projectFacts(P);
+    const ign = new Set(P.bibleIgnore || []);
+    const allText = App.chapterList().map(c => { const d = App.ch(c.id); return d && d.data ? d.data.paras.map(parText).join('\n') : ''; }).join('\n');
+    const words = countWords(allText);
+    this.chars(P).forEach(c => {
+      // edad: el texto dice otra cosa (y es consistente)
+      const ag = pf.agesBy.get(c.id);
+      if (c.isChar && ag && ag.length) {
+        const v = ag[0].v;
+        if (c.age !== v && ag.every(x => x.v === v)) out.push({ key: 'age|' + c.id + '|' + v, iid: c.id, kind: 'age', text: 'El texto dice que ' + c.title + ' tiene ' + v + ' años' + (c.age ? '; la ficha dice ' + c.age : '; la ficha no tiene edad') + '.', apply: 'Poner ' + v + ' en la ficha', field: 'Edad', value: String(v) });
+      }
+      // muerto en la ficha, pero el texto no lo cuenta y aparece actuando
+      if (c.dead && !pf.deaths.has(c.id)) {
+        const acts = c.names.some(n => new RegExp('(?<![\\p{L}])' + escRe(n) + '\\s+(?:dijo|respondió|preguntó|sonrió|gritó|llegó|entró|abrió|miró|caminó|llamó|escribió)(?![\\p{L}])', 'u').test(allText));
+        if (acts) out.push({ key: 'dead|' + c.id, iid: c.id, kind: 'dead', text: 'La ficha dice que ' + c.title + ' está muerto, pero en el texto no muere y aparece actuando.', apply: 'Quitar «muerto» de la ficha', field: 'Estado', value: '' });
+      }
+      // forma del nombre: el texto usa otra, siempre igual
+      c.names.filter(n => /\s/.test(n)).forEach(n => {
+        const cn = pf.counts.get(c.id + '|' + n);
+        if (cn && cn.join.length && !cn.sep.length && n === c.title) out.push({ key: 'name|' + c.id + '|' + cn.join[0].text, iid: c.id, kind: 'name', text: 'En el texto siempre aparece «' + cn.join[0].text + '»; la ficha dice «' + n + '».', apply: 'Cambiar el nombre de la ficha', title: cn.join[0].text });
+      });
+      // ya no aparece en el texto
+      // solo para fichas que alguna vez aparecieron en el texto (una ficha planificada que aún no escribes no se toca)
+      if ((P.bibleSeen || []).includes(c.id) && (c.isChar || /lugar|locaci/i.test(c.sl)) && c.title.split(/\s+/).length <= 4 && !c.names.some(n => new RegExp('(?<![\\p{L}])' + escRe(n) + '(?![\\p{L}])', 'iu').test(allText))) out.push({ key: 'gone|' + c.id, iid: c.id, kind: 'gone', text: '«' + c.title + '» ya no aparece en el texto.', apply: 'Quitar la ficha' });
+    });
+    return out.filter(x => !ign.has(x.key));
+  },
+  /* Recuerda qué fichas ya aparecieron alguna vez en el texto. */
+  markSeen(P) {
+    const t = this.projectFacts(P).allText;
+    const seen = new Set(P.bibleSeen || []); let add = false;
+    this.chars(P).forEach(c => { if (!seen.has(c.id) && c.names.some(n => new RegExp('(?<![\\p{L}])' + escRe(n) + '(?![\\p{L}])', 'iu').test(t))) { seen.add(c.id); add = true; } });
+    if (add && RT.canWrite) App.proj().update(x => { x.bibleSeen = Array.from(seen).slice(-1000); }, { silent: true });
+  },
+  applySync(sg) {
+    App.proj().update(x => {
+      (x.bible.sections || []).forEach(s => {
+        const i = (s.items || []).findIndex(it => it.id === sg.iid); if (i < 0) return;
+        const it = s.items[i];
+        if (sg.kind === 'gone') { s.items.splice(i, 1); return; }
+        if (sg.kind === 'name') { const old = it.title; it.title = sg.title; it.fields = it.fields || {}; const al = (it.fields['También llamado'] || '').split(',').map(z => z.trim()).filter(Boolean); if (old && !al.includes(old)) al.push(old); it.fields['También llamado'] = al.join(', '); return; }
+        it.fields = it.fields || {};
+        if (sg.kind === 'dead') { const k = Object.keys(it.fields).find(f => /^estado/i.test(f)) || 'Estado'; it.fields[k] = ''; return; }
+        const k = Object.keys(it.fields).find(f => /^edad/i.test(f)) || sg.field; it.fields[k] = sg.value;
+      });
+    }, { now: true });
+  },
+  ignoreSync(sg) { App.proj().update(x => { x.bibleIgnore = Array.from(new Set((x.bibleIgnore || []).concat(sg.key))).slice(-300); }, { now: true }); },
   /* Datos del capítulo completo (se calcula una vez por versión del texto). */
   chapterFacts(paras) {
     const key = paras.map(p => p.id + ':' + parText(p).length).join('|');
@@ -73,29 +175,16 @@ const Coherence = {
     const chars = this.chars(P);
     const allNames = new Set(); chars.forEach(c => c.names.forEach(n => n.split(/\s+/).forEach(w => allNames.add(fold(w)))));
     const sents = sentences(text);
-    // edades que no coinciden con la biblia: «Ana, de 40 años» o «Ana tiene 40 años»
-    if (on('age')) chars.filter(c => c.isChar && c.age).forEach(c => {
-      sents.forEach(s => {
-        if (/\b(cuando|hace|de niñ|de joven|tendría|tendrá|cumplirá|cumpliría|antes|después|años atrás)\b/i.test(s)) return;
-        c.names.forEach(n => {
-          const rr = new RegExp('(?<![\\p{L}])' + escRe(n) + '(?:,\\s*(?:de|con)\\s+|\\s+(?:ya\\s+)?(?:tiene|tenía|cumple|cumplía)\\s+)' + NUM_RE + '\\s+años(?![\\p{L}])', 'gu'); let m;
-          while ((m = rr.exec(s))) { const v = parseNum(m[1]); if (v != null && v !== c.age) add('coh', 'age', m[0], 'En la biblia, ' + c.title + ' tiene ' + c.age + ' años. Si es otro momento de la historia, ignóralo.'); }
-        });
-      });
+    // El texto manda: la biblia se ajusta al texto. Solo se marca el texto cuando algo contradice
+    // lo que el propio texto ya había establecido antes (en el orden del libro).
+    const pf = this.projectFacts(P);
+    const here = (x) => x.pid === p.id;
+    if (on('age')) pf.ages.forEach(list => {
+      const first = list[0];
+      list.filter(here).forEach(x => { if (x.v !== first.v && x !== first) add('coh', 'age', x.text, 'Antes, en ' + first.where + ', ' + x.name + ' tiene ' + first.v + ' años. Si pasó el tiempo en la historia, ignóralo.'); });
     });
-    // personajes que en la biblia murieron
-    if (on('dead')) chars.filter(c => c.dead).forEach(c => {
-      c.names.forEach(n => {
-        const rr = new RegExp('(?<![\\p{L}])' + escRe(n) + '\\s+(?:dijo|respondió|preguntó|sonrió|gritó|llegó|entró|abrió|miró|caminó|llamó|escribió)(?![\\p{L}])', 'gu'); let m;
-        while ((m = rr.exec(text))) add('coh', 'dead', m[0], 'En la biblia, ' + c.title + ' está muerto. ¿Es un recuerdo o un error?');
-      });
-    });
-    // variantes juntas o separadas: «Rosa María» / «Rosamaría»
-    if (on('name')) chars.forEach(c => c.names.filter(n => /\s/.test(n)).forEach(n => {
-      const joined = n.replace(/\s+/g, '');
-      const rr = new RegExp('(?<![\\p{L}])' + escRe(joined) + '(?![\\p{L}])', 'giu'); let m;
-      while ((m = rr.exec(text))) if (m[0] !== n) add('coh', 'name', m[0], 'En la biblia se escribe «' + n + '».', n);
-    }));
+    if (on('dead')) pf.after.filter(here).forEach(x => add('coh', 'dead', x.text, x.name + ' muere antes en el texto (' + x.where + '). ¿Es un recuerdo o un error?'));
+    if (on('name')) pf.forms.filter(here).forEach(x => add('coh', 'name', x.text, 'En el resto del texto se escribe «' + x.main + '».', x.main));
     const facts = this.chapterFacts(paras);
     // personajes que aparecen seguido y no tienen ficha
     const hasChars = ((P.bible && P.bible.sections) || []).some(z => z.graph || /personaj/i.test(z.label));
