@@ -283,7 +283,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .selbar .msg{font-size:.75rem;color:var(--soft);padding:0 .4rem}
 
 /* foco */
-.focus .side,.focus .wbar,.focus .margin,.focus .top,.focus .status{display:none}
+.focus .side,.focus .wbar,.focus .margin,.focus .top,.focus .status,.focus .ai-banner{display:none}
 .focus .proj{grid-template-columns:minmax(0,1fr)}
 .focus .write{grid-template-columns:minmax(0,42rem)}
 .focus .paper{background:transparent;border-color:transparent;box-shadow:none;padding-top:22vh;padding-bottom:50vh}
@@ -293,6 +293,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .marks-strong .doc .m:not(.off):not(.ort):not(.pend):not(.done){box-shadow:inset 0 -2px 0 var(--t-fg)}
 .focus-exit{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(var(--gr) + 4px);z-index:50;opacity:.35;display:flex;gap:.35rem;transition:opacity .2s}
 .focus-exit:hover{opacity:1}
+.fx-nav{display:flex;align-items:center;gap:.25rem;margin-right:.4rem}
+.fx-nav .fx-ch{min-width:2rem;padding-left:.5rem;padding-right:.5rem}
+.fx-nav .fx-ch[disabled]{opacity:.35}
+.fx-t{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8125rem;color:var(--muted);padding:0 .25rem}
+@media (max-width:640px){.fx-t{display:none}}
 
 /* cajón lateral */
 @media (min-width:1000px){ body.has-drawer #main{padding-right:min(440px,40vw)} body.has-drawer .drawer{width:min(440px,40vw)} }

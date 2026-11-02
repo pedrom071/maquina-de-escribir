@@ -1,0 +1,37 @@
+// Modo foco y ultra foco: se puede pasar de capítulo sin salir del modo.
+const { chromium } = require('playwright');
+const { spawn } = require('child_process');
+const path = require('path');
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + msg); if (!c) fails++; };
+(async () => {
+  const srv = spawn('python3', ['-m', 'http.server', '8782', '--bind', '127.0.0.1'], { cwd: path.resolve(__dirname, '../docs'), stdio: 'ignore' });
+  await sleep(700);
+  const b = await chromium.launch();
+  const pg = await (await b.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 860 } })).newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  await pg.goto('http://127.0.0.1:8782/'); await sleep(1200);
+  await pg.evaluate(() => App.createProject('Foco', 'novela', 0, [{ title: 'Uno', paras: [] }, { title: 'Dos', paras: [] }, { title: 'Tres', paras: [] }], 'mine')); await sleep(900);
+  const ids = await pg.evaluate(() => App.chapterList().map(c => c.id));
+  await pg.evaluate(() => Editor.setFocus(true)); await sleep(200);
+  ok(await pg.evaluate(() => !!document.querySelector('#focus-exit .fx-ch[disabled]') && document.querySelectorAll('#focus-exit .fx-ch').length === 2), 'en foco hay flechas de capítulo (la anterior apagada en el primero)');
+  await pg.click('#focus-exit .fx-ch:last-of-type'); await sleep(700);
+  let st = await pg.evaluate(() => ({ cid: App.cid, focus: App.focus, cls: document.body.classList.contains('focus'), bar: !!document.querySelector('#focus-exit'), t: document.querySelector('#focus-exit .fx-t').textContent, act: document.activeElement && document.activeElement.id }));
+  ok(st.cid === ids[1] && st.focus && st.cls && st.bar, 'pasa al capítulo 2 y sigue en modo foco');
+  ok(/Dos/.test(st.t) && st.act === 'doc', 'muestra el capítulo actual y deja el cursor listo para escribir');
+  await pg.evaluate(() => Editor.setUltra(true)); await sleep(150);
+  await pg.keyboard.press('Alt+PageDown'); await sleep(700);
+  st = await pg.evaluate(() => ({ cid: App.cid, focus: App.focus, ultra: App.ultra, cls: document.body.classList.contains('ultra'), sp: Editor.root.spellcheck, next: document.querySelectorAll('#focus-exit .fx-ch')[1].disabled }));
+  ok(st.cid === ids[2] && st.focus && st.ultra && st.cls && !st.sp, 'con Alt+AvPág en ultra foco pasa al 3 y sigue en ultra foco');
+  ok(st.next, 'en el último, la flecha siguiente está apagada');
+  await pg.keyboard.press('Alt+PageUp'); await sleep(700);
+  ok(await pg.evaluate(() => App.cid) === ids[1] && await pg.evaluate(() => App.ultra), 'y vuelve hacia atrás');
+  await pg.keyboard.press('Escape'); await sleep(200);
+  ok(await pg.evaluate(() => !App.focus && !App.ultra && !document.querySelector('#focus-exit')), 'Esc sale del modo');
+  await pg.evaluate(() => Pages.goChapter(1)); await sleep(700);
+  ok(await pg.evaluate(() => !App.focus), 'fuera del modo foco, cambiar de capítulo no lo activa');
+  ok(!errs.length, 'sin errores de página ' + errs.join(' | '));
+  await b.close(); srv.kill();
+  process.exit(fails ? 1 : 0);
+})();

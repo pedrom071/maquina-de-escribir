@@ -72,6 +72,11 @@ const Editor = {
     if (window.Versions) Versions.prime(cid);
     if (window.Review) Review.onMount(cid);
     if (App.focusOnMount && RT.canWrite) { App.focusOnMount = false; setTimeout(() => this.focusStart(), 30); }
+    if (App.keepFocus) {
+      const k = App.keepFocus; App.keepFocus = null; this.lastCaret = null;
+      this.setFocus(true); if (k.ultra) this.setUltra(true);
+      if (RT.canWrite) setTimeout(() => { this.focusStart(); window.scrollTo(0, 0); }, 40);
+    }
   },
   unmount() {
     if (!this.root) return;
@@ -79,7 +84,7 @@ const Editor = {
     if (this.ro) this.ro.disconnect();
     this.hideSelbar(); this.closeSheet();
     if (window.CSS && CSS.highlights) ['eco', 'busca', 'busca-act', 'larga'].forEach(k => CSS.highlights.delete(k));
-    if (App.focus) this.setFocus(false);
+    if (App.focus && !App.keepFocus) this.setFocus(false);
     document.body.classList.remove('clean');
     this.root = null; this.cdoc = null; this.cid = null; this.stage = null;
   },
@@ -970,7 +975,13 @@ const Editor = {
     if (window.Ideas) Ideas.fab();
     const old = $('#focus-exit'); if (old) old.remove();
     if (on) {
+      const prev = Pages.neighbor(-1), next = Pages.neighbor(1), nm = (c) => c.title || Pages.label(c);
+      const unit = App.unit().toLowerCase();
       document.body.append(h('div', { class: 'focus-exit', id: 'focus-exit' },
+        h('div', { class: 'fx-nav' },
+          h('button', { class: 'btn small fx-ch', type: 'button', disabled: !prev || null, title: prev ? 'Anterior: ' + nm(prev) + ' (' + keys('alt', 'pgup') + ')' : 'Es el primero', 'aria-label': unit + ' anterior', onclick: () => Pages.goChapter(-1) }, '←'),
+          h('span', { class: 'fx-t', title: App.chTitle(this.cid), text: App.chTitle(this.cid) || Pages.label(App.chapterList().find(c => c.id === this.cid) || {}) }),
+          h('button', { class: 'btn small fx-ch', type: 'button', disabled: !next || null, title: next ? 'Siguiente: ' + nm(next) + ' (' + keys('alt', 'pgdn') + ')' : 'Es el último', 'aria-label': unit + ' siguiente', onclick: () => Pages.goChapter(1) }, '→')),
         h('button', { class: 'btn small', id: 'ultra-btn', type: 'button', 'aria-pressed': App.ultra ? 'true' : 'false', title: 'Sin marcas, colores ni revisión: solo escribir (' + keys('mod', 'shift', '.') + ')', onclick: () => this.setUltra(!App.ultra) }, App.ultra ? 'Ultra foco ✓' : 'Ultra foco'),
         h('button', { class: 'btn small', type: 'button', onclick: () => this.setFocus(false) }, 'Salir · Esc')));
       if (this.root) { this.root.classList.toggle('dim', App.prefs.focusDim !== false); this.root.focus(); if (this.lastCaret) this.setCaret(this.lastCaret); this.markCurrent(); setTimeout(() => this.typewriter(), 50); }
