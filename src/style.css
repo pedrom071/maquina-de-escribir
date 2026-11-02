@@ -337,7 +337,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 
 /* menú */
-.menu{position:fixed;z-index:65;min-width:220px;max-width:min(320px,calc(100vw - 24px));background:var(--sheet);border:1px solid var(--line2);border-radius:9px;box-shadow:var(--shadow-pop);padding:.35rem;display:flex;flex-direction:column}
+.menu{position:fixed;z-index:65;min-width:220px;max-width:min(320px,calc(100vw - 24px));background:var(--sheet);border:1px solid var(--line2);border-radius:9px;box-shadow:var(--shadow-pop);padding:.35rem;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.menu>*{flex:0 0 auto}
+.menu.scroll{box-shadow:var(--shadow-pop),inset 0 -14px 12px -12px rgba(0,0,0,.18)}
+.menu::-webkit-scrollbar{width:8px}.menu::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px}
 .menu button{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;border:0;background:none;padding:.5rem .6rem;border-radius:6px;cursor:pointer;font-size:.8438rem;color:var(--ink)}
 .menu button:hover,.menu button:focus-visible{background:var(--accent-soft);outline:none}
 .menu button .k{margin-left:auto}

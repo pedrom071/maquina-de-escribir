@@ -74,18 +74,23 @@ const UI = {
     });
     document.body.append(m);
     const r = anchor.getBoundingClientRect();
-    const w = m.offsetWidth, hh = m.offsetHeight;
+    const w = m.offsetWidth, hh = m.offsetHeight, vh = window.innerHeight;
     let left = (opts && opts.alignLeft) ? r.left : r.right - w;
     left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
-    let top = r.bottom + 6;
-    if (top + hh > window.innerHeight - 8) top = Math.max(8, r.top - hh - 6);
+    // abre hacia donde haya más espacio; si no cabe entero, se desplaza dentro del menú
+    const below = vh - r.bottom - 14, above = r.top - 14;
+    let top;
+    if (hh <= below || below >= above) { top = r.bottom + 6; m.style.maxHeight = Math.max(160, below) + 'px'; }
+    else { const mh = Math.min(hh, above); top = Math.max(8, r.top - mh - 6); m.style.maxHeight = Math.max(160, above) + 'px'; }
+    if (hh > parseFloat(m.style.maxHeight)) m.classList.add('scroll');
     m.style.left = left + 'px'; m.style.top = top + 'px';
     this.menuEl = m;
     const first = m.querySelector('button:not([disabled])'); if (first) first.focus();
     m.addEventListener('keydown', (e) => {
       const bs = $$('button:not([disabled])', m), i = bs.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') { e.preventDefault(); bs[(i + 1) % bs.length].focus(); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); bs[(i - 1 + bs.length) % bs.length].focus(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); const b = bs[(i + 1) % bs.length]; b.focus(); b.scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); const b = bs[(i - 1 + bs.length) % bs.length]; b.focus(); b.scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); const b = e.key === 'Home' ? bs[0] : bs[bs.length - 1]; b.focus(); b.scrollIntoView({ block: 'nearest' }); }
       if (e.key === 'Escape') { e.preventDefault(); this.closeMenu(); anchor.focus(); }
     });
     setTimeout(() => {
