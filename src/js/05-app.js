@@ -148,7 +148,7 @@ const App = {
     document.body.classList.remove('focus');
     $('#btn-side').hidden = true; $('#btn-search').hidden = true;
     this.renderHome(); this.renderCrumbs(); this.renderStatus();
-    if (window.Ideas) Ideas.fab();
+    if (window.Ideas) { Ideas.fab(); Ideas.renderPanel(); }
     if (window.Collab) Collab.setPresence();
   },
   renderHome() {
@@ -465,7 +465,7 @@ const App = {
       main.append(proj);
     }
     this.renderSide(); this.renderStage(); this.renderCrumbs(); this.renderStatus();
-    if (window.Ideas) { Ideas.open(); Ideas.fab(); }
+    if (window.Ideas) { Ideas.open(); Ideas.fab(); if (Ideas.panelOpen) Ideas.renderPanel(); }
     if (window.innerWidth <= 1100) this.toggleSide(false);
     if (window.Collab) Collab.setPresence();
   },

@@ -69,7 +69,8 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   ok(await pg.evaluate(() => /1 idea para este capítulo/.test((document.querySelector('#idea-badge') || {}).textContent || '')), 'aviso de ideas en el capítulo');
   // captura rápida con Alt + N
   await pg.keyboard.press('Alt+KeyN'); await sleep(300);
-  await pg.keyboard.type('Una gaviota con un ala rota'); await pg.keyboard.press('Control+Enter'); await sleep(400);
+  await pg.keyboard.type('Una gaviota con un ala rota'); await pg.keyboard.press('Enter'); await sleep(400);
+  await pg.evaluate(() => Ideas.togglePanel(false));
   ok(await pg.evaluate(() => Ideas.list().some(x => /gaviota/.test(x.text))), 'Alt + N guarda una idea desde el editor');
   // pasar a la biblia
   await pg.evaluate(() => { const x = Ideas.list().find(z => z.cat === 'personaje'); Ideas.toBible(x); }); await sleep(300);

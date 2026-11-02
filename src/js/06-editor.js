@@ -203,7 +203,7 @@ const Editor = {
       { label: (this.lastCaret && Pages.hasBreak(this.lastCaret.pid)) ? 'Quitar el salto de página' : 'Salto de página antes de este párrafo', kbd: keys('alt', 'enter'), disabled: !RT.canWrite, onClick: () => Pages.toggleBreak() },
       { label: 'Hueco por escribir', kbd: keys('alt', 'H'), disabled: !RT.canWrite, onClick: () => this.insertGap() },
       { label: 'Separador de escena (* * *)', kbd: keys('alt', 'S'), disabled: !RT.canWrite, onClick: () => this.insertSep() },
-      { label: 'Anotar una idea', kbd: keys('alt', 'N'), disabled: !RT.canWrite, onClick: () => Ideas.quick() },
+      { label: 'Ideas (anotar y revisar)', kbd: keys('alt', 'N'), disabled: !RT.canWrite, onClick: () => Ideas.togglePanel(true) },
       { label: 'Ir a…', kbd: keys('mod', 'K'), onClick: () => Pages.palette() },
       { sep: true },
       { label: 'Dividir aquí: lo que sigue pasa a un ' + App.unit().toLowerCase() + ' nuevo', disabled: !RT.canWrite || !this.lastCaret, onClick: () => this.splitChapter() },

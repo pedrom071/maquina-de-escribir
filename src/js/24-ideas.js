@@ -298,14 +298,95 @@ const Ideas = {
     const n = this.coll ? this.list().filter(x => !x.done && !x.cid).length : 0;
     if (!b) {
       b = h('div', { id: 'idea-fab', class: 'idea-fab' },
-        h('button', { type: 'button', class: 'fab-main', title: 'Anotar una idea (' + keys('alt', 'N') + ')', onclick: () => this.quick() }, icon('idea'), h('span', { class: 'lbl', text: 'Idea' })),
-        h('button', { type: 'button', class: 'fab-all', title: 'Ver todas las ideas', onclick: () => App.go('p-' + App.pid + '-ideas') }, h('b')));
+        h('button', { type: 'button', class: 'fab-main', title: 'Ideas: anotar y revisar mientras escribes (' + keys('alt', 'N') + ')', 'aria-expanded': 'false', onclick: () => this.togglePanel() }, icon('idea'), h('span', { class: 'lbl', text: 'Ideas' })),
+        h('button', { type: 'button', class: 'fab-all', title: 'Ideas sin lugar', onclick: () => this.togglePanel(true, 'sinlugar') }, h('b')));
       document.body.append(b);
     }
     b.classList.toggle('subtle', !!App.focus);
     const all = b.querySelector('.fab-all'); all.hidden = !n || App.tab === 'ideas' || !!App.focus;
     all.querySelector('b').textContent = n > 99 ? '99+' : String(n);
-    all.title = plural(n, 'idea sin lugar', 'ideas sin lugar') + ' · ver todas';
+    all.title = plural(n, 'idea sin lugar', 'ideas sin lugar');
+    b.querySelector('.fab-main').setAttribute('aria-expanded', this.panelOpen ? 'true' : 'false');
+    if (this.panelOpen) this.renderPanel();
+  },
+  /* ---------- panel flotante: las ideas a mano, como notas, mientras escribes ---------- */
+  togglePanel(force, tab) {
+    const open = force != null ? force : !this.panelOpen;
+    this.panelOpen = open;
+    if (tab) this.ptab = tab;
+    if (!open) { const p = $('#idea-panel'); if (p) p.remove(); this.fab(); return; }
+    this.fab();
+    this.renderPanel(true);
+  },
+  renderPanel(focusInput) {
+    if (!this.panelOpen || App.view !== 'project') { const old = $('#idea-panel'); if (old) old.remove(); return; }
+    let p = $('#idea-panel');
+    const typing = p && document.activeElement && p.contains(document.activeElement) && document.activeElement.tagName === 'TEXTAREA';
+    const draft = p ? (p.querySelector('textarea') || {}).value || '' : '';
+    if (!p) { p = h('aside', { id: 'idea-panel', class: 'idea-panel', role: 'dialog', 'aria-label': 'Ideas' }); document.body.append(p); }
+    const scroll = p.querySelector('.ip-list') ? p.querySelector('.ip-list').scrollTop : 0;
+    p.textContent = '';
+    p.classList.toggle('subtle', !!App.focus);
+    const inCh = App.tab === 'escribir' && App.cid;
+    this.ptab = this.ptab || (inCh ? 'aqui' : 'todas');
+    if (this.ptab === 'aqui' && !inCh) this.ptab = 'todas';
+    const all = this.list().filter(x => !x.done);
+    const tabs = [inCh ? ['aqui', 'Este ' + App.unit().toLowerCase(), all.filter(x => x.cid === App.cid).length] : null, ['sinlugar', 'Sin lugar', all.filter(x => !x.cid).length], ['todas', 'Todas', all.length]].filter(Boolean);
+    p.append(h('div', { class: 'ip-head' },
+      h('div', { class: 'ip-tabs', role: 'tablist' }, ...tabs.map(([k, l, n]) => h('button', { type: 'button', role: 'tab', 'aria-selected': this.ptab === k ? 'true' : 'false', onclick: () => { this.ptab = k; this.renderPanel(); } }, l, h('b', { text: String(n) })))),
+      ibtn('close', 'Cerrar ideas (Esc)', () => this.togglePanel(false))));
+    // anotar
+    const ta = h('textarea', { class: 'ip-in', rows: '2', placeholder: 'Anota una idea… (Enter guarda · Shift + Enter, salto de línea)', 'aria-label': 'Nueva idea' });
+    ta.value = draft;
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); const t = ta.value.trim(); if (!t) return;
+        this.add({ text: t, cid: this.ptab === 'aqui' ? App.cid : null }); ta.value = ''; this.renderPanel(true);
+      } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.togglePanel(false); if (window.Editor && Editor.root) Editor.root.focus(); }
+      else if (e.key === 'ArrowDown' && !ta.value) { e.preventDefault(); const f = p.querySelector('.ip-it'); if (f) f.focus(); }
+    });
+    ta.addEventListener('paste', async (e) => { const f = Array.from(e.clipboardData.files || []).find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); this.add({ text: ta.value.trim(), img: await this.compress(f), kind: 'imagen', cid: this.ptab === 'aqui' ? App.cid : null }); ta.value = ''; } });
+    p.append(h('div', { class: 'ip-cap' }, ta, h('div', { class: 'ip-capb' },
+      h('button', { type: 'button', title: 'Garabato', onclick: () => this.sketch((u) => this.add({ text: ta.value.trim(), img: u, kind: 'garabato', cid: this.ptab === 'aqui' ? App.cid : null })) }, icon('pen')),
+      h('button', { type: 'button', title: 'Abrir la sección Ideas', onclick: () => { this.togglePanel(false); App.go('p-' + App.pid + '-ideas'); } }, icon('grid')))));
+    // lista
+    if (!this._sugAt || Date.now() - this._sugAt > 15000) { this.prepSuggest(); this._sugAt = Date.now(); }
+    const shown = all.filter(x => this.ptab === 'todas' || (this.ptab === 'aqui' ? x.cid === App.cid : !x.cid));
+    const list = h('div', { class: 'ip-list' });
+    if (!shown.length) list.append(h('p', { class: 'ip-empty', text: this.ptab === 'aqui' ? 'No hay ideas para este ' + App.unit().toLowerCase() + '. Las que anotes aquí quedan asignadas a él.' : 'No hay ideas aquí todavía.' }));
+    shown.forEach(x => {
+      const ch = x.cid ? App.chapterList().find(c => c.id === x.cid) : null;
+      const sg = !x.cid ? this.suggest(x) : null;
+      const it = h('div', { class: 'ip-it' + (x.pin ? ' pin' : ''), tabindex: '0', dataset: { id: x.id } });
+      if (x.img) it.append(h('img', { src: x.img, alt: '', onclick: () => this.zoomImg(x.img) }));
+      if (x.text) it.append(h('p', { text: x.text }));
+      const meta = h('div', { class: 'ip-meta' }, h('span', { text: (IDEA_CATS[x.cat] || IDEA_CATS.otra).g + ' ' + (IDEA_CATS[x.cat] || IDEA_CATS.otra).l }), this.ptab !== 'aqui' ? h('span', { text: ch ? '→ ' + (ch.title || Pages.label(ch)) : 'sin lugar' }) : null);
+      it.append(meta);
+      const acts = h('div', { class: 'ip-acts' });
+      if (App.tab === 'escribir' && App.cid && x.text) acts.append(h('button', { type: 'button', title: 'Llevar al texto, después del párrafo donde estás (queda como usada)', onclick: () => this.toText(x) }, '↳ Al texto'));
+      if (inCh && x.cid !== App.cid) acts.append(h('button', { type: 'button', title: 'Asignar a este ' + App.unit().toLowerCase(), onclick: () => this.update(x.id, z => { z.cid = App.cid; }) }, 'Aquí'));
+      if (sg && (!inCh || sg.c.id !== App.cid)) acts.append(h('button', { type: 'button', class: 'sug', title: 'Sugerencia ' + sg.why, onclick: () => this.update(x.id, z => { z.cid = sg.c.id; }) }, '→ ' + (sg.c.title || Pages.label(sg.c)) + '?'));
+      acts.append(h('button', { type: 'button', title: 'Marcar como usada', onclick: () => this.update(x.id, z => { z.done = true; }) }, '✓'));
+      it.append(acts);
+      it.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); const n = it.nextElementSibling; if (n) n.focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); const n = it.previousElementSibling; if (n) n.focus(); else ta.focus(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.togglePanel(false); }
+      });
+      list.append(it);
+    });
+    p.append(list);
+    list.scrollTop = scroll;
+    if (focusInput || typing) setTimeout(() => { const t = $('#idea-panel .ip-in'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 20);
+  },
+  /* Lleva el texto de la idea al capítulo, como párrafo nuevo después del cursor. */
+  toText(x) {
+    if (!window.Editor || !Editor.root) return;
+    const pid = Editor.insertParaAfter([{ t: x.text }]);
+    if (!pid) return;
+    this.update(x.id, z => { z.done = true; z.cid = App.cid; });
+    Editor.root.focus(); Editor.setCaret({ pid: pid, off: x.text.length });
+    App.toast('Idea llevada al texto (quedó como usada).', { action: { label: 'Deshacer', fn: () => { Editor.undo(); this.update(x.id, z => { z.done = false; }); } } });
   },
   catMenu(a, x) { UI.menu(a, Object.keys(IDEA_CATS).map(k => ({ label: IDEA_CATS[k].g + '  ' + IDEA_CATS[k].l, checked: x.cat === k, onClick: () => this.update(x.id, z => { z.cat = k; z.catAuto = false; }) }))); },
   chMenu(a, x) {
@@ -388,5 +469,5 @@ const Ideas = {
 window.Ideas = Ideas;
 document.addEventListener('keydown', (e) => {
   if (!window.App || App.view !== 'project' || !RT.canWrite) return;
-  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyN') { e.preventDefault(); Ideas.quick(); }
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyN') { e.preventDefault(); Ideas.togglePanel(true); }
 });
