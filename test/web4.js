@@ -18,7 +18,8 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const lines = lastPrompt.split('\n').filter(l => /^A\d+ · /.test(l));
       // confirma solo la primera observación automática (mejorando la nota) y agrega una propia
       const first = lines[0] ? lines[0].split(' · ')[0] : null;
-      out = JSON.stringify([first ? { auto: first, note: 'IA: confirmada y mejor explicada.' } : null, { type: 'coh', text: 'Juan', note: 'IA: ¿Juan o Joan?' }].filter(Boolean));
+      const second = lines[1] ? lines[1].split(' · ')[0] : null;
+      out = JSON.stringify([first ? { auto: first, note: 'IA: confirmada y mejor explicada.' } : null, second ? { descartar: second, por: 'estilo buscado' } : null, { type: 'coh', text: 'Juan', note: 'IA: ¿Juan o Joan?' }].filter(Boolean));
     }
     const ev = (o) => 'event: ' + o.type + '\ndata: ' + JSON.stringify(o) + '\n\n';
     route.fulfill({ status: 200, contentType: 'text/event-stream', body: ev({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: out } }) + ev({ type: 'message_stop' }) });
@@ -36,12 +37,18 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   console.log('B prompt incluye observaciones', /Observaciones automáticas:\nA1 · /.test(lastPrompt));
   const after = await marks();
   console.log('C después de la IA', after);
-  console.log('   descartadas guardadas', await pg.evaluate(() => (App.ch(App.cid).data.dismiss || {})[App.ch(App.cid).data.paras[0].id].length));
+  const dis = await pg.evaluate(() => ((App.ch(App.cid).data.dismiss || {})[App.ch(App.cid).data.paras[0].id] || []).length);
+  console.log('   descartadas guardadas', dis);
+  const ok = (c, m) => console.log((c ? 'ok   ' : 'FALLA ') + m);
+  ok(dis === 1, 'solo se descarta lo que la IA descarta explícitamente');
+  ok(after.length === before.length - 2 + 2, 'las automáticas no mencionadas se mantienen (' + before.length + ' → ' + after.length + ')');
+  ok(after.some(x => /IA: confirmada/.test(x) || /^claude:/.test(x)), 'la IA agrega y mejora');
   // editar de nuevo el párrafo: la revisión automática no debe volver a poner lo descartado
   await pg.evaluate(() => { const pe = document.querySelector('#doc > p'); Editor.root.focus(); Editor.setCaret({ pid: pe.dataset.id, off: 1e9 }); });
   await pg.keyboard.type(' Fin.'); await sleep(2500);
   const again = await marks();
   console.log('D tras editar', again);
+  ok(again.length >= after.length - 1, 'al editar no se pierden marcas');
   console.log('ERR', errs);
   await b.close(); srv.kill();
 })();

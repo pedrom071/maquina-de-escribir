@@ -133,37 +133,49 @@ const Review = {
   },
   integrationRules() {
     return [
-      'Antes que tú pasó una revisión automática por reglas (diccionario, puntuación, frases largas, ecos, muletillas). Sus observaciones vienen etiquetadas (A1, A2…). Son candidatas, no verdades:',
+      'Antes que tú pasó una revisión automática por reglas (diccionario, puntuación, frases largas, ecos, muletillas, coherencia con la biblia). Sus observaciones vienen etiquetadas (A1, A2…). Son candidatas:',
       '- Si una es correcta, inclúyela en tu lista con el campo "auto" igual a su etiqueta; puedes mejorar la nota, cambiar el tipo o corregir la propuesta en "fix".',
-      '- Si es un falso positivo (nombre propio, chilenismo o palabra válida, repetición o estilo buscado por el autor, voz del narrador), simplemente no la incluyas: se descartará.',
-      '- Agrega además lo que la revisión automática no ve (coherencia, ambigüedad, voz).',
-      'Tu lista es la final y reemplaza a la automática.'
+      '- Si es claramente un falso positivo (nombre propio, chilenismo o palabra válida, repetición evidentemente intencional), agrega {"descartar":"A2","por":"razón breve"}. Solo descarta cuando estés seguro.',
+      '- Las que no menciones se mantienen tal cual.',
+      '- Revisa el texto completo con el mismo detalle que si no hubiera observaciones automáticas, y agrega todo lo que ellas no ven (coherencia, ambigüedad, voz, ritmo, repeticiones, ortografía).'
     ].join('\n');
   },
-  /* Reemplaza las marcas viejas del párrafo por la lista consolidada y recuerda lo descartado. */
+  /* Reemplaza las marcas viejas de la IA por la lista nueva. De las automáticas, solo se quitan las que la IA confirma (con su versión mejorada) o descarta explícitamente. */
   applyList(x, pid, list, obs, P, protectedIds, integrate) {
     const k = x.paras.findIndex(z => z.id === pid); if (k < 0) return { added: 0, removed: 0 };
     const np = clone(x.paras[k]);
-    const stale = (m) => isStale(m, protectedIds) || (integrate && isStale(m, protectedIds, 'revisor'));
-    const removed = np.segs.filter(s => s.m && stale(s.m)).length;
-    np.segs = normSegs(np.segs.map(s => (s.m && stale(s.m)) ? { t: s.m.text } : s));
-    let added = 0; const used = new Set();
+    const findObs = (ref) => { ref = String(ref || '').trim().toUpperCase(); return ref ? obs.find(z => z.id.toUpperCase() === ref || z.id.toUpperCase().endsWith('.' + ref)) : null; };
+    const discards = new Set(), confirmed = new Set();
+    const marks = [];
     list.forEach(it => {
-      const ref = it && typeof it.auto === 'string' ? it.auto.trim().toUpperCase() : '';
-      const o = ref ? obs.find(z => z.id.toUpperCase() === ref) : null;
-      if (o) { used.add(o.id); if (!it.text) it.text = o.m.text; if (!it.type) it.type = o.m.type; if (it.fix == null && o.m.fix) it.fix = o.m.fix.to; }
-      if (this.insert(np, it, P, o)) added++;
+      if (!it) return;
+      if (it.descartar) { const o = findObs(it.descartar); if (o) discards.add(o.m.id); return; }
+      const o = typeof it.auto === 'string' ? findObs(it.auto) : null;
+      if (o) { confirmed.add(o.m.id); if (!it.text) it.text = o.m.text; if (!it.type) it.type = o.m.type; if (it.fix == null && o.m.fix) it.fix = o.m.fix.to; }
+      marks.push({ it: it, o: o });
     });
-    if (integrate && obs.length) {
+    const stale = (m) => isStale(m, protectedIds) || (integrate && m.by === 'revisor' && (discards.has(m.id) || confirmed.has(m.id)));
+    const removed = np.segs.filter(s => s.m && stale(s.m) && !confirmed.has(s.m.id)).length;
+    np.segs = normSegs(np.segs.map(s => (s.m && stale(s.m)) ? { t: s.m.text } : s));
+    let added = 0;
+    marks.forEach(({ it, o }) => { if (this.insert(np, it, P, o)) added++; });
+    if (integrate && discards.size) {
       x.dismiss = x.dismiss || {};
       const prev = x.dismiss[pid] || [];
-      const dis = obs.filter(o => !used.has(o.id)).map(o => ({ r: o.m.rule || '', t: o.m.text }));
-      x.dismiss[pid] = prev.concat(dis).slice(-40);
-      const words = obs.filter(o => !used.has(o.id) && o.m.rule === 'spell' && o.m.word).map(o => o.m.word);
+      const gone = obs.filter(o => discards.has(o.m.id));
+      x.dismiss[pid] = prev.concat(gone.map(o => ({ r: o.m.rule || '', t: o.m.text }))).slice(-40);
+      const words = gone.filter(o => o.m.rule === 'spell' && o.m.word).map(o => o.m.word);
       if (words.length) x.okWords = Array.from(new Set((x.okWords || []).concat(words))).slice(-300);
     }
     x.paras[k] = np;
     return { added: added, removed: removed };
+  },
+  /* Vuelve a mostrar las marcas automáticas que la IA descartó en este capítulo. */
+  restoreDismissed(cid) {
+    const d = App.ch(cid); if (!d || !d.data) return;
+    const n = Object.values(d.data.dismiss || {}).reduce((a, v) => a + v.length, 0) + (d.data.okWords || []).length;
+    d.update(x => { delete x.dismiss; delete x.okWords; }, { now: true });
+    Checker.run(cid).then(r => App.toast(n ? 'Listo: las marcas automáticas vuelven a aparecer' + (r && r.added ? ' (' + plural(r.added, 'marca', 'marcas') + ')' : '') + '.' : 'No había marcas descartadas.'));
   },
   allowed(P) { const t = (P.review && P.review.types) || ['rep', 'dud', 'coh', 'bien', 'ort', 'rec']; return t.filter(x => TYPE_RULES[x]); },
   baseRules(P) {
@@ -194,9 +206,9 @@ const Review = {
     const bible = bibleDigest(P, 3500);
     const prompt = [
       this.baseRules(P),
-      'Revisa SOLO el párrafo indicado. Como máximo ' + maxN + ' marcas. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
+      'Revisa SOLO el párrafo indicado, con detalle. Hasta ' + maxN + ' marcas propias. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
       obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
-      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"}]. Si no hay nada que marcar, responde [].',
+      'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"},{"descartar":"A2","por":"nombre propio"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
       next ? '\nTexto siguiente (contexto):\n' + next : '',
@@ -211,7 +223,8 @@ const Review = {
       let added = 0, removed = 0;
       if (cur) {
         const changedMeanwhile = parText(cur) !== full;
-        d.update(x => { const r = this.applyList(x, job.pid, list.slice(0, maxN), obs, P, protectedIds, integ); added = r.added; removed = r.removed; }, { silent: true });
+        const mk = list.filter(i => i && !i.descartar).slice(0, maxN), ds = list.filter(i => i && i.descartar);
+        d.update(x => { const r = this.applyList(x, job.pid, mk.concat(ds), obs, P, protectedIds, integ); added = r.added; removed = r.removed; }, { silent: true });
         if (!changedMeanwhile) { const s = Editor.dirty.get(job.cid); if (s) s.delete(job.pid); }
       }
       this.running = null;
@@ -249,7 +262,8 @@ const Review = {
     const paras = d.data.paras.filter(p => parText(p).trim());
     if (!paras.length) { App.toast('No hay texto que revisar.'); return; }
     const chunks = []; let cur = [], size = 0;
-    paras.forEach(p => { const t = parText(p); if (size + t.length > 40000 && cur.length) { chunks.push(cur); cur = []; size = 0; } cur.push(p); size += t.length; });
+    // tramos moderados: con textos muy largos de una vez la revisión se vuelve superficial
+    paras.forEach(p => { const t = parText(p); if (size + t.length > 12000 && cur.length) { chunks.push(cur); cur = []; size = 0; } cur.push(p); size += t.length; });
     if (cur.length) chunks.push(cur);
     const dens = (P.review && P.review.density) || 'normal';
     const per = { pocas: 0.8, normal: 1.6, muchas: 3 }[dens] || 1.6;
@@ -267,12 +281,12 @@ const Review = {
         const obsBy = new Map(); let nObs = 0;
         if (integ) ch.forEach((p, i) => { const o = this.autoObs(p, protectedIds, 'P' + (i + 1) + '.'); if (o.length) { obsBy.set(p.id, o); nObs += o.length; } });
         const body = ch.map((p, i) => '[P' + (i + 1) + '] ' + parText(p) + (obsBy.has(p.id) ? '\n  Observaciones automáticas:\n  ' + this.obsLines(obsBy.get(p.id)).replace(/\n/g, '\n  ') : '')).join('\n\n');
-        const maxT = Math.min(160, Math.max(4, Math.round(ch.length * per)) + nObs);
+        const maxT = Math.min(140, Math.max(6, Math.round(ch.length * per)));
         const prompt = [
           this.baseRules(P),
-          'Revisa todo el texto siguiente, párrafo por párrafo. Como máximo ' + maxT + ' marcas en total, priorizando lo más importante. Indica en "p" la etiqueta del párrafo.',
+          'Revisa todo el texto siguiente, párrafo por párrafo y con detalle. Hasta ' + maxT + ' marcas propias (sin contar las automáticas que confirmes o descartes); no es una cuota, pero no omitas nada que de verdad lo merezca. Indica en "p" la etiqueta del párrafo.',
           nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
-          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"}]. Si no hay nada, responde [].',
+          'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"},{"p":"P6","descartar":"P6.A2","por":"nombre propio"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body
         ].join('\n');
@@ -281,7 +295,12 @@ const Review = {
         const res = await RT.sample.json(prompt, { modelTier: 'default' });
         const list = Array.isArray(res) ? res : [];
         const byPid = new Map();
-        list.forEach(it => { const pid = it && labels.get(String(it.p || '').trim().toUpperCase()); if (pid) { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(it); } });
+        list.forEach(it => {
+          if (!it) return;
+          let lab = String(it.p || '').trim().toUpperCase();
+          if (!lab && (it.descartar || it.auto)) lab = String(it.descartar || it.auto).toUpperCase().split('.')[0];
+          const pid = labels.get(lab); if (pid) { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(it); }
+        });
         d.update(x => {
           ch.forEach(op => {
             const r = this.applyList(x, op.id, byPid.get(op.id) || [], obsBy.get(op.id) || [], P, protectedIds, integ);

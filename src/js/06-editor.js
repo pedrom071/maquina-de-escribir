@@ -148,6 +148,7 @@ const Editor = {
       { header: 'Sin IA' },
       { label: 'Revisión rápida del ' + unit, onClick: () => Checker.chapter(this.cid) },
       Pages.pages.length > 1 ? { label: 'Revisión rápida de esta página (' + Pages.cur + ')', onClick: () => Pages.reviewQuick() } : null,
+      (this.cdoc && this.cdoc.data && (this.cdoc.data.dismiss || this.cdoc.data.okWords)) ? { label: 'Recuperar marcas automáticas que descartó la IA', onClick: () => Review.restoreDismissed(this.cid) } : null,
       { label: 'Revisión rápida al escribir', checked: App.prefs.autoLocal !== false, keep: true, onClick: () => { App.prefs.autoLocal = App.prefs.autoLocal === false; App.savePrefs(); } },
       { sep: true },
       { header: 'Diálogo' },
