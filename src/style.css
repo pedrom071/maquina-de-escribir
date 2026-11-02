@@ -153,6 +153,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .proj{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - var(--top-h) - var(--status-h))}
 .side{position:sticky;top:calc(var(--top-h) + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - var(--top-h) - var(--status-h) - env(safe-area-inset-top,0px));overflow:auto;border-right:1px solid var(--line);padding:1.1rem .8rem 2rem max(.8rem,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:1.1rem;background:var(--bg)}
 .side .ptitle{font:400 1.65rem/1.05 var(--f-display);margin:0 .3rem;overflow-wrap:anywhere}
+.side .ptitle.editable{cursor:text;border-radius:6px;padding:.1rem .3rem;margin:0;transition:background .15s}
+.side .ptitle.editable:hover,.side .ptitle.editable:focus-visible{background:var(--sunk);outline:none}
+.side .ptitle-inp{font:400 1.65rem/1.05 var(--f-display);width:100%;box-sizing:border-box;margin:0;padding:.1rem .3rem;border:1px solid var(--line2);border-radius:6px;background:var(--raised);color:inherit}
 .side .pkind{font:500 .6562rem/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--soft);margin:.4rem .3rem 0}
 .nav{display:flex;flex-direction:column;gap:2px}
 .nav button{display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;padding:.5rem .55rem;border:0;border-radius:6px;background:none;cursor:pointer;color:var(--soft);font-size:.875rem}

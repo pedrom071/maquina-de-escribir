@@ -246,7 +246,7 @@ const App = {
     return card;
   },
   projectMenu(a, d, space) {
-    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }, { label: 'Leer como libro', onClick: () => { this.go('p-' + d.id); setTimeout(() => Lectura.open(), 500); } }, { label: 'Maqueta de libro (PDF)', onClick: () => { this.go('p-' + d.id); setTimeout(() => Maqueta.open(), 500); } }];
+    const items = [{ label: 'Abrir', onClick: () => this.go('p-' + d.id) }, { label: 'Cambiar nombre…', onClick: () => this.renameProject(d) }, { label: 'Leer como libro', onClick: () => { this.go('p-' + d.id); setTimeout(() => Lectura.open(), 500); } }, { label: 'Maqueta de libro (PDF)', onClick: () => { this.go('p-' + d.id); setTimeout(() => Maqueta.open(), 500); } }];
     if (this.colls.team && this.colls.mine) {
       if (space === 'mine') items.push({ label: 'Compartir con el equipo', onClick: () => this.moveProject(d.id, 'team') });
       else { items.push({ label: 'Hacer una copia privada', onClick: () => this.moveProject(d.id, 'mine', true) }); items.push({ label: 'Mover a mis proyectos', onClick: () => this.moveProject(d.id, 'mine') }); }
@@ -256,6 +256,34 @@ const App = {
     items.push({ label: 'Juntar con otros proyectos…', onClick: () => Collections.joinDialog([d.id]) });
     items.push({ sep: true }, { label: 'Mover a la papelera', danger: true, onClick: () => { d.update(x => { x.trashed = true; }, { now: true }); this.renderHomeSoon(); this.toast('Proyecto en la papelera.', { action: { label: 'Deshacer', fn: () => { d.update(x => { x.trashed = false; }, { now: true }); this.renderHomeSoon(); } } }); } });
     UI.menu(a, items);
+  },
+  async renameProject(d) {
+    const t = await UI.prompt('Cambiar nombre', 'Título del proyecto', d.data.title || '');
+    if (t == null || !t.trim() || t.trim() === d.data.title) return;
+    d.update(x => { x.title = t.trim(); }, { now: true });
+    this.renderHomeSoon(); if (this.view === 'project') { this.renderSide(); this.renderCrumbs(); }
+  },
+  /* Título del proyecto en la barra lateral: se edita ahí mismo con un clic. */
+  sideTitle(P) {
+    const t = h('h2', { class: 'ptitle', text: P.title });
+    if (!RT.canWrite) return t;
+    t.classList.add('editable'); t.tabIndex = 0; t.title = 'Cambiar nombre del proyecto'; t.setAttribute('role', 'button');
+    const edit = () => {
+      const inp = h('input', { class: 'ptitle-inp', value: P.title || '', 'aria-label': 'Título del proyecto', maxlength: '160' });
+      let done = false;
+      const end = (save) => {
+        if (done) return; done = true;
+        const v = inp.value.trim();
+        if (save && v && v !== P.title) { this.proj().update(x => { x.title = v; }, { now: true }); this.renderCrumbs(); this.renderHomeSoon(); }
+        this.renderSide();
+      };
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); end(true); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); end(false); } });
+      inp.addEventListener('blur', () => end(true));
+      t.replaceWith(inp); inp.focus(); inp.select();
+    };
+    t.addEventListener('click', edit);
+    t.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); edit(); } });
+    return t;
   },
   /* Mueve o copia un proyecto completo (capítulos y versiones) entre el espacio privado y el compartido. */
   async moveProject(pid, to, copy) {
@@ -477,7 +505,7 @@ const App = {
     const keepScroll = side.scrollTop;
     side.textContent = '';
     side.classList.toggle('open', this.sideOpen);
-    side.append(h('div', null, h('p', { class: 'pkind', text: k.label }), h('h2', { class: 'ptitle', text: P.title })));
+    side.append(h('div', null, h('p', { class: 'pkind', text: k.label }), this.sideTitle(P)));
     const words = (P.stats && P.stats.words) || 0;
     const goal = h('div', { class: 'goal' });
     goal.append(h('div', null, fmtN(words) + ' palabras' + (P.goal ? ' de ' + fmtN(P.goal) : '') + ' · hoy ' + (this.wordsToday() >= 0 ? '+' : '') + fmtN(this.wordsToday())));
