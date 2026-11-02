@@ -125,8 +125,73 @@ const Review = {
   fp(t) { let h = 5381; const s = fold(String(t || '')).replace(/\s+/g, ' ').trim(); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); },
   /* Observaciones anteriores de la IA sobre el párrafo (para no cambiar de criterio sin motivo). */
   prevObs(p) { const out = []; p.segs.forEach(s => { if (s.m && s.m.by === 'claude' && !s.m.done) out.push({ id: 'R' + (out.length + 1), m: s.m }); }); return out; },
-  prevLines(prev) { return prev.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '')).join('\n'); },
-  prevRules() { return 'Tus observaciones anteriores sobre este texto vienen etiquetadas (R1, R2…). Sé consistente: si una sigue siendo válida, repítela con "prev" igual a su etiqueta y con el mismo criterio (puedes ajustar el fragmento si cambió); si el texto ya la resolvió, omítela. No cambies de opinión sobre frases que no cambiaron.'; },
+  prevLines(prev) { return prev.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '') + (o.m.replies && o.m.replies.length ? ' · conversación: ' + this.thread(o.m).replace(/\n/g, ' / ') : '')).join('\n'); },
+  prevRules() { return 'Tus observaciones anteriores sobre este texto vienen etiquetadas (R1, R2…). Sé consistente: si una sigue siendo válida, repítela con "prev" igual a su etiqueta y con el mismo criterio (puedes ajustar el fragmento si cambió); si el texto ya la resolvió, omítela. No cambies de opinión sobre frases que no cambiaron. Si hubo conversación con el autor, respeta lo que quedó claro en ella.'; },
+  /* ---------- conversación en una nota: el autor responde y la IA contesta en el mismo hilo ---------- */
+  live: new Map(),
+  canTalk(m) { return !!(m && (m.by === 'claude' || m.by === 'revisor')) && !!RT.sample && !this.disabled && RT.canWrite && (!RT.web || AI.ready()) && App.prefs.replyAI !== false; },
+  thread(m) { return (m.replies || []).map(r => (r.by === 'claude' ? 'Revisor' : 'Autor') + ': ' + String(r.text || '').replace(/\s+/g, ' ').trim()).join('\n'); },
+  cleanLive(t) { return String(t || '').replace(/^\s*(FIX:.*|\[?CERRAR\]?\.?)\s*$/gim, '').trim(); },
+  paintLive: rafThrottle(function () {
+    Review.live.forEach((t, id) => { const el = document.querySelector('.rep-live[data-id="' + CSS.escape(id) + '"] span'); if (el) el.textContent = t || 'pensando…'; });
+    if (window.Editor && Editor.root) Editor.layoutSoon();
+  }),
+  async answer(cid, mid) {
+    const d = App.ch(cid), P = App.P();
+    const f = d && d.data ? findMark(d.data, mid) : null;
+    if (!f || !P || this.live.has(mid) || !this.canTalk(f.m)) return;
+    const m = f.m, i = d.data.paras.indexOf(f.p);
+    const prev = d.data.paras.slice(Math.max(0, i - 2), i).map(parText).join('\n\n').slice(-1200);
+    const next = d.data.paras.slice(i + 1, i + 2).map(parText).join('\n\n').slice(0, 500);
+    const bible = bibleDigest(P, 2500);
+    const ty = (TYPES[m.type] && TYPES[m.type].l) || m.type;
+    const prompt = [
+      this.baseRules(P),
+      'El autor respondió a una observación sobre su texto. Contéstale en ese mismo hilo, como corrector.',
+      'Cómo responder:',
+      '- Breve: máximo 70 palabras, en español de Chile, sobrio y cordial, sin adular ni disculparte de más.',
+      '- Si el autor explica que es intencional, que es un nombre o una palabra válida, o tiene razón, reconócelo en una frase y termina con una línea que diga solo CERRAR.',
+      '- Si la observación sigue valiendo, explica por qué con algo concreto del texto: qué palabra se repite y dónde, qué dato contradice a cuál y en qué parte, qué doble lectura permite la frase.',
+      '- Si pregunta qué hacer, sugiere qué mirar o qué decidir (qué palabra cambiar, qué dato fijar, qué aclarar), sin escribir la frase por él ni proponer trama, escenas ni argumentos.',
+      '- Si es un error de ortografía, tildes o puntuación y das la forma correcta, termina con una línea "FIX: " seguida solo del fragmento corregido.',
+      '- Si te pide reescribir o inventar, explica en una frase que tu rol es señalar y dile qué revisar.',
+      '- Mantén tu criterio salvo que el autor te dé una razón; no cambies de opinión solo porque insiste.',
+      'Responde en texto plano, sin comillas alrededor ni encabezados.',
+      '\nOBSERVACIÓN (' + ty + '): «' + m.text + '»' + (m.note ? ' — ' + m.note : '') + (m.fix && m.fix.to ? ' (corrección propuesta: «' + m.fix.to + '»)' : ''),
+      m.by === 'revisor' ? '(La hizo la revisión automática por reglas, sin IA. Si es un falso positivo, dilo.)' : '',
+      '\nCONVERSACIÓN:\n' + this.thread(m),
+      '\nPÁRRAFO:\n' + parText(f.p),
+      prev ? '\nTexto anterior (contexto):\n' + prev : '',
+      next ? '\nTexto siguiente (contexto):\n' + next : '',
+      bible ? '\nBiblia del proyecto:\n' + bible : ''
+    ].filter(Boolean).join('\n');
+    this.live.set(mid, '');
+    try {
+      const r = await RT.sample(prompt, { onText: ({ text }) => { if (this.live.has(mid)) { this.live.set(mid, this.cleanLive(text)); this.paintLive(); } } });
+      let t = String((r && r.text) || ''), close = false, fix = null;
+      t = t.replace(/^\s*FIX:\s*(.+)$/im, (_, x) => { fix = x.trim().replace(/^["«“]|["»”]$/g, ''); return ''; });
+      t = t.replace(/^\s*\[?CERRAR\]?\.?\s*$/im, () => { close = true; return ''; }).trim();
+      this.live.delete(mid);
+      if (!t && !close) throw { code: 'empty' };
+      let ok = false;
+      d.update(x => {
+        const k = x.paras.findIndex(p => p.segs.some(s => s.m && s.m.id === mid)); if (k < 0) return;
+        const p = clone(x.paras[k]); const mm = p.segs.find(s => s.m && s.m.id === mid).m;
+        mm.replies = mm.replies || [];
+        mm.replies.push({ id: uid('r'), by: 'claude', text: t || 'Tienes razón; la doy por resuelta.', at: Date.now() });
+        if (fix && mm.type === 'ort' && !(mm.fix && mm.fix.to) && fix !== mm.text && fix.length <= mm.text.length * 2 + 20) mm.fix = { to: fix };
+        if (close && !mm.done) { mm.done = true; x.rejected = (x.rejected || []).concat({ t: mm.type, x: fold(mm.text || ''), r: mm.rule || '' }).slice(-300); }
+        x.paras[k] = p; ok = true;
+      }, { silent: true });
+      this.afterMarks(cid);
+      if (ok && close) App.toast(AI.name(true) + ' dio la nota por resuelta.', { id: 'talk', action: { label: 'Reabrir', fn: () => { const z = findMark(d.data, mid); if (z && z.m.done && Editor.cid === cid) Editor.noteAction('done', mid); } } });
+    } catch (e) {
+      this.live.delete(mid);
+      this.afterMarks(cid);
+      if (e && e.code === 'empty') App.toast(AI.name(true) + ' no alcanzó a responder. Intenta de nuevo.');
+      else this.fail(e);
+    }
+  },
   rejectedIn(d, text) { const ft = fold(text || ''); return (d.data.rejected || []).filter(r => r.x && ft.includes(r.x)); },
   rejLines(rej) { return rej.slice(0, 20).map(r => '- ' + r.t + ' · «' + r.x + '»').join('\n'); },
   integrate(P) { return !(P && P.review && P.review.integrate === false); },
@@ -225,7 +290,7 @@ const Review = {
       'Revisa SOLO el párrafo indicado, con detalle. Hasta ' + maxN + ' marcas propias. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
       obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
       prevO.length ? this.prevRules() + '\nObservaciones anteriores:\n' + this.prevLines(prevO) : '',
-      rejO.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejO) : '',
+      rejO.length ? 'El autor ya revisó y borró o descartó estas observaciones; no las repitas:\n' + this.rejLines(rejO) : '',
       'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"},{"descartar":"A2","por":"nombre propio"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
@@ -316,7 +381,7 @@ const Review = {
           'Revisa todo el texto siguiente, párrafo por párrafo y con detalle. Hasta ' + maxT + ' marcas propias (sin contar las automáticas que confirmes o descartes); no es una cuota, pero no omitas nada que de verdad lo merezca. Indica en "p" la etiqueta del párrafo.',
           nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
           prevBy.size ? this.prevRules() + ' Las etiquetas llevan el párrafo delante (P3.R1).' : '',
-          rejAll.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejAll) : '',
+          rejAll.length ? 'El autor ya revisó y borró o descartó estas observaciones; no las repitas:\n' + this.rejLines(rejAll) : '',
           'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"},{"p":"P6","descartar":"P6.A2","por":"nombre propio"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body

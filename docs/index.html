@@ -275,6 +275,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rep-i{font-size:.7812rem}
 .rep-i b{font-weight:600}
 .note:not(.active) .reps .rep-i:not(:last-child){display:none}
+.rep-i.ai{padding-left:.55rem;border-left:2px solid var(--line)}
+.rep-live span{white-space:pre-wrap}
+.rep-live b::after{content:'';display:inline-block;width:.35rem;height:.35rem;margin:0 .3rem .1rem 0;border-radius:50%;background:currentColor;opacity:.5;animation:repPulse 1s ease-in-out infinite}
+@keyframes repPulse{50%{opacity:.1}}
+@media (prefers-reduced-motion:reduce){.rep-live b::after{animation:none}}
 .nacts{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.55rem}
 .note:not(.active) .nacts{display:none}
 .act{font:500 .7188rem/1 var(--f-ui);padding:.4rem .55rem;border-radius:5px;border:1px solid var(--line2);background:var(--sheet);color:var(--ink);cursor:pointer;white-space:nowrap}
@@ -971,7 +976,7 @@ body.reading .idea-panel,body.has-drawer .idea-panel{display:none}
 <div id="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript><p style="padding:2rem;font-family:system-ui">Máquina de escribir necesita JavaScript.</p></noscript>
-<script>window.MDE_WEB = true; window.MDE_VERSION = '7506eb83e2';</script>
+<script>window.MDE_WEB = true; window.MDE_VERSION = 'da0617cf6f';</script>
 <script>
 (function () {
 'use strict';
@@ -3072,6 +3077,7 @@ const Editor = {
       RT.web
         ? { label: 'IA al hacer una pausa', checked: App.prefs.autoAI === true, keep: true, onClick: () => { App.prefs.autoAI = !(App.prefs.autoAI === true); App.savePrefs(); } }
         : { label: 'Revisar sola al hacer una pausa', checked: !!App.prefs.auto, keep: true, onClick: () => { App.prefs.auto = !App.prefs.auto; App.savePrefs(); App.toast(App.prefs.auto ? 'Revisión automática activada.' : 'Revisión automática desactivada.'); } },
+      { label: 'Contestar cuando respondes una nota', checked: App.prefs.replyAI !== false, keep: true, onClick: () => { App.prefs.replyAI = App.prefs.replyAI === false; App.savePrefs(); } },
       RT.web ? { label: 'Configurar IA…', onClick: () => AI.open() } : null
     ]), { alignLeft: false });
   },
@@ -3640,13 +3646,15 @@ const Editor = {
     }
     el.append(h('p', { class: 'ntext' + (m.note ? '' : ' blank'), text: m.note || (m.by === 'claude' ? '' : 'Sin nota. Edítala para agregar un comentario.') }));
     if (m.fix && m.fix.to) el.append(h('p', { class: 'fix' }, m.fix.applied ? 'Aplicado: ' : 'Propuesta: ', m.fix.applied ? h('ins', { text: m.fix.to }) : [h('del', { text: m.fix.from }), ' → ', h('ins', { text: m.fix.to })]));
-    if (m.replies && m.replies.length) {
+    const talking = Review.live.has(m.id);
+    if ((m.replies && m.replies.length) || talking) {
       const reps = h('div', { class: 'reps' });
-      m.replies.forEach(r => reps.append(h('div', { class: 'rep-i' }, h('b', { text: this.author(r.by) + ': ' }), r.text)));
+      (m.replies || []).forEach(r => reps.append(h('div', { class: 'rep-i' + (r.by === 'claude' ? ' ai' : '') }, h('b', { text: this.author(r.by) + ': ' }), r.text)));
+      if (talking) reps.append(h('div', { class: 'rep-i ai rep-live', dataset: { id: m.id }, 'aria-live': 'polite' }, h('b', { text: this.author('claude') + ': ' }), h('span', { text: Review.live.get(m.id) || 'pensando…' })));
       el.append(reps);
     }
     if (this.replyTo === m.id && RT.canWrite) {
-      const ta = h('textarea', { 'data-k': 'r-' + m.id, 'aria-label': 'Respuesta', placeholder: 'Responde…' });
+      const ta = h('textarea', { 'data-k': 'r-' + m.id, 'aria-label': 'Respuesta', placeholder: Review.canTalk(m) ? 'Responde o pregunta; ' + AI.name() + ' te contesta aquí…' : 'Responde…' });
       ta.value = this.noteDraft['r-' + m.id] || '';
       el.append(ta, h('div', { class: 'nacts', style: 'display:flex' }, this.act('Responder', 'send-reply', m.id, 'primary'), this.act('Cancelar', 'cancel-reply', m.id)));
       return el;
@@ -3813,6 +3821,7 @@ const Editor = {
       const v = (this.noteDraft['r-' + id] || '').trim();
       if (v) this.mutateMark(id, p => { const x = p.segs.find(s => s.m && s.m.id === id).m; x.replies = x.replies || []; x.replies.push({ id: uid('r'), by: RT.me || 'local', text: v, at: Date.now() }); });
       this.replyTo = null; delete this.noteDraft['r-' + id];
+      if (v && Review.canTalk(m)) Review.answer(this.cid, id);
     } else if (a === 'thread') {
       App.proj().update(x => { x.threads = x.threads || []; x.threads.push({ id: uid('t'), title: (m.note || m.text).slice(0, 90), body: '«' + m.text + '» (' + App.chTitle(this.cid) + ')', status: 'open', markId: id, cid: this.cid, at: Date.now() }); }, { now: true });
       App.toast('Quedó como cabo suelto en la biblia.', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-biblia') } });
@@ -4017,8 +4026,73 @@ const Review = {
   fp(t) { let h = 5381; const s = fold(String(t || '')).replace(/\s+/g, ' ').trim(); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); },
   /* Observaciones anteriores de la IA sobre el párrafo (para no cambiar de criterio sin motivo). */
   prevObs(p) { const out = []; p.segs.forEach(s => { if (s.m && s.m.by === 'claude' && !s.m.done) out.push({ id: 'R' + (out.length + 1), m: s.m }); }); return out; },
-  prevLines(prev) { return prev.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '')).join('\n'); },
-  prevRules() { return 'Tus observaciones anteriores sobre este texto vienen etiquetadas (R1, R2…). Sé consistente: si una sigue siendo válida, repítela con "prev" igual a su etiqueta y con el mismo criterio (puedes ajustar el fragmento si cambió); si el texto ya la resolvió, omítela. No cambies de opinión sobre frases que no cambiaron.'; },
+  prevLines(prev) { return prev.map(o => o.id + ' · ' + o.m.type + ' · «' + o.m.text + '» · ' + (o.m.note || '') + (o.m.replies && o.m.replies.length ? ' · conversación: ' + this.thread(o.m).replace(/\n/g, ' / ') : '')).join('\n'); },
+  prevRules() { return 'Tus observaciones anteriores sobre este texto vienen etiquetadas (R1, R2…). Sé consistente: si una sigue siendo válida, repítela con "prev" igual a su etiqueta y con el mismo criterio (puedes ajustar el fragmento si cambió); si el texto ya la resolvió, omítela. No cambies de opinión sobre frases que no cambiaron. Si hubo conversación con el autor, respeta lo que quedó claro en ella.'; },
+  /* ---------- conversación en una nota: el autor responde y la IA contesta en el mismo hilo ---------- */
+  live: new Map(),
+  canTalk(m) { return !!(m && (m.by === 'claude' || m.by === 'revisor')) && !!RT.sample && !this.disabled && RT.canWrite && (!RT.web || AI.ready()) && App.prefs.replyAI !== false; },
+  thread(m) { return (m.replies || []).map(r => (r.by === 'claude' ? 'Revisor' : 'Autor') + ': ' + String(r.text || '').replace(/\s+/g, ' ').trim()).join('\n'); },
+  cleanLive(t) { return String(t || '').replace(/^\s*(FIX:.*|\[?CERRAR\]?\.?)\s*$/gim, '').trim(); },
+  paintLive: rafThrottle(function () {
+    Review.live.forEach((t, id) => { const el = document.querySelector('.rep-live[data-id="' + CSS.escape(id) + '"] span'); if (el) el.textContent = t || 'pensando…'; });
+    if (window.Editor && Editor.root) Editor.layoutSoon();
+  }),
+  async answer(cid, mid) {
+    const d = App.ch(cid), P = App.P();
+    const f = d && d.data ? findMark(d.data, mid) : null;
+    if (!f || !P || this.live.has(mid) || !this.canTalk(f.m)) return;
+    const m = f.m, i = d.data.paras.indexOf(f.p);
+    const prev = d.data.paras.slice(Math.max(0, i - 2), i).map(parText).join('\n\n').slice(-1200);
+    const next = d.data.paras.slice(i + 1, i + 2).map(parText).join('\n\n').slice(0, 500);
+    const bible = bibleDigest(P, 2500);
+    const ty = (TYPES[m.type] && TYPES[m.type].l) || m.type;
+    const prompt = [
+      this.baseRules(P),
+      'El autor respondió a una observación sobre su texto. Contéstale en ese mismo hilo, como corrector.',
+      'Cómo responder:',
+      '- Breve: máximo 70 palabras, en español de Chile, sobrio y cordial, sin adular ni disculparte de más.',
+      '- Si el autor explica que es intencional, que es un nombre o una palabra válida, o tiene razón, reconócelo en una frase y termina con una línea que diga solo CERRAR.',
+      '- Si la observación sigue valiendo, explica por qué con algo concreto del texto: qué palabra se repite y dónde, qué dato contradice a cuál y en qué parte, qué doble lectura permite la frase.',
+      '- Si pregunta qué hacer, sugiere qué mirar o qué decidir (qué palabra cambiar, qué dato fijar, qué aclarar), sin escribir la frase por él ni proponer trama, escenas ni argumentos.',
+      '- Si es un error de ortografía, tildes o puntuación y das la forma correcta, termina con una línea "FIX: " seguida solo del fragmento corregido.',
+      '- Si te pide reescribir o inventar, explica en una frase que tu rol es señalar y dile qué revisar.',
+      '- Mantén tu criterio salvo que el autor te dé una razón; no cambies de opinión solo porque insiste.',
+      'Responde en texto plano, sin comillas alrededor ni encabezados.',
+      '\nOBSERVACIÓN (' + ty + '): «' + m.text + '»' + (m.note ? ' — ' + m.note : '') + (m.fix && m.fix.to ? ' (corrección propuesta: «' + m.fix.to + '»)' : ''),
+      m.by === 'revisor' ? '(La hizo la revisión automática por reglas, sin IA. Si es un falso positivo, dilo.)' : '',
+      '\nCONVERSACIÓN:\n' + this.thread(m),
+      '\nPÁRRAFO:\n' + parText(f.p),
+      prev ? '\nTexto anterior (contexto):\n' + prev : '',
+      next ? '\nTexto siguiente (contexto):\n' + next : '',
+      bible ? '\nBiblia del proyecto:\n' + bible : ''
+    ].filter(Boolean).join('\n');
+    this.live.set(mid, '');
+    try {
+      const r = await RT.sample(prompt, { onText: ({ text }) => { if (this.live.has(mid)) { this.live.set(mid, this.cleanLive(text)); this.paintLive(); } } });
+      let t = String((r && r.text) || ''), close = false, fix = null;
+      t = t.replace(/^\s*FIX:\s*(.+)$/im, (_, x) => { fix = x.trim().replace(/^["«“]|["»”]$/g, ''); return ''; });
+      t = t.replace(/^\s*\[?CERRAR\]?\.?\s*$/im, () => { close = true; return ''; }).trim();
+      this.live.delete(mid);
+      if (!t && !close) throw { code: 'empty' };
+      let ok = false;
+      d.update(x => {
+        const k = x.paras.findIndex(p => p.segs.some(s => s.m && s.m.id === mid)); if (k < 0) return;
+        const p = clone(x.paras[k]); const mm = p.segs.find(s => s.m && s.m.id === mid).m;
+        mm.replies = mm.replies || [];
+        mm.replies.push({ id: uid('r'), by: 'claude', text: t || 'Tienes razón; la doy por resuelta.', at: Date.now() });
+        if (fix && mm.type === 'ort' && !(mm.fix && mm.fix.to) && fix !== mm.text && fix.length <= mm.text.length * 2 + 20) mm.fix = { to: fix };
+        if (close && !mm.done) { mm.done = true; x.rejected = (x.rejected || []).concat({ t: mm.type, x: fold(mm.text || ''), r: mm.rule || '' }).slice(-300); }
+        x.paras[k] = p; ok = true;
+      }, { silent: true });
+      this.afterMarks(cid);
+      if (ok && close) App.toast(AI.name(true) + ' dio la nota por resuelta.', { id: 'talk', action: { label: 'Reabrir', fn: () => { const z = findMark(d.data, mid); if (z && z.m.done && Editor.cid === cid) Editor.noteAction('done', mid); } } });
+    } catch (e) {
+      this.live.delete(mid);
+      this.afterMarks(cid);
+      if (e && e.code === 'empty') App.toast(AI.name(true) + ' no alcanzó a responder. Intenta de nuevo.');
+      else this.fail(e);
+    }
+  },
   rejectedIn(d, text) { const ft = fold(text || ''); return (d.data.rejected || []).filter(r => r.x && ft.includes(r.x)); },
   rejLines(rej) { return rej.slice(0, 20).map(r => '- ' + r.t + ' · «' + r.x + '»').join('\n'); },
   integrate(P) { return !(P && P.review && P.review.integrate === false); },
@@ -4117,7 +4191,7 @@ const Review = {
       'Revisa SOLO el párrafo indicado, con detalle. Hasta ' + maxN + ' marcas propias. No repitas estos fragmentos ya marcados por el autor u otras personas: ' + JSON.stringify(kept) + '.',
       obs.length ? this.integrationRules() + '\nObservaciones automáticas:\n' + this.obsLines(obs) : '',
       prevO.length ? this.prevRules() + '\nObservaciones anteriores:\n' + this.prevLines(prevO) : '',
-      rejO.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejO) : '',
+      rejO.length ? 'El autor ya revisó y borró o descartó estas observaciones; no las repitas:\n' + this.rejLines(rejO) : '',
       'Responde solo con un arreglo JSON, por ejemplo: [{"type":"rep","text":"fragmento exacto","note":"nota breve"},{"type":"ort","text":"ordena","note":"Falta una sílaba.","fix":"ordenada","auto":"A1"},{"descartar":"A2","por":"nombre propio"}]. Si no hay nada que marcar, responde [].',
       bible ? '\nBiblia del proyecto (lo ya decidido):\n' + bible : '',
       '\nTexto anterior (contexto):\n' + (prev || '(inicio)'),
@@ -4208,7 +4282,7 @@ const Review = {
           'Revisa todo el texto siguiente, párrafo por párrafo y con detalle. Hasta ' + maxT + ' marcas propias (sin contar las automáticas que confirmes o descartes); no es una cuota, pero no omitas nada que de verdad lo merezca. Indica en "p" la etiqueta del párrafo.',
           nObs ? this.integrationRules() + '\nLas etiquetas de las observaciones automáticas llevan el párrafo delante (P3.A1).' : '',
           prevBy.size ? this.prevRules() + ' Las etiquetas llevan el párrafo delante (P3.R1).' : '',
-          rejAll.length ? 'El autor ya revisó y borró estas observaciones; no las repitas:\n' + this.rejLines(rejAll) : '',
+          rejAll.length ? 'El autor ya revisó y borró o descartó estas observaciones; no las repitas:\n' + this.rejLines(rejAll) : '',
           'Responde solo con un arreglo JSON, por ejemplo: [{"p":"P3","type":"coh","text":"fragmento exacto","note":"nota breve"},{"p":"P5","type":"ort","text":"queria","note":"Falta la tilde.","fix":"quería","auto":"P5.A1"},{"p":"P6","descartar":"P6.A2","por":"nombre propio"}]. Si no hay nada, responde [].',
           bible ? '\nBiblia del proyecto:\n' + bible : '',
           '\nTEXTO (' + (App.chTitle(cid) || App.unit()) + (chunks.length > 1 ? ', parte ' + (ci + 1) + ' de ' + chunks.length : '') + '):\n' + body
@@ -5859,9 +5933,9 @@ const Profile = {
 
   reviewSection(sec) {
     const chk = (key, label, def) => { const c = h('input', { type: 'checkbox', checked: def ? App.prefs[key] !== false : App.prefs[key] === true }); c.addEventListener('change', () => { App.prefs[key] = c.checked; App.savePrefs(); this.persist(); }); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: label })); };
-    if (!RT.web) return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('auto', 'Revisar con Claude al hacer una pausa', true));
+    if (!RT.web) return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('auto', 'Revisar con Claude al hacer una pausa', true), chk('replyAI', 'Claude contesta cuando respondes una nota', true));
     const st = h('p', { class: 'muted', style: 'margin:0;font-size:.85rem', text: AI.ready() ? 'IA configurada: ' + (AI.cfg().provider === 'anthropic' ? 'Anthropic' : AI.cfg().provider === 'openai' ? 'OpenAI' : 'servicio compatible') + ' · ' + AI.cfg().model + '.' : 'Sin IA configurada. La revisión rápida funciona igual.' });
-    return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('autoAI', 'Revisión con IA al hacer una pausa (usa tu clave)', false), h('div', { class: 'row' }, st, btn(AI.ready() ? 'Cambiar IA' : 'Configurar IA', () => AI.open(), 'small')));
+    return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('autoAI', 'Revisión con IA al hacer una pausa (usa tu clave)', false), chk('replyAI', 'La IA contesta cuando respondes una nota', true), h('div', { class: 'row' }, st, btn(AI.ready() ? 'Cambiar IA' : 'Configurar IA', () => AI.open(), 'small')));
   },
   dataSection(sec) {
     const file = h('input', { type: 'file', accept: '.json', class: 'sr', id: 'restore-all' });

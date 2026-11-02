@@ -174,6 +174,7 @@ const Editor = {
       RT.web
         ? { label: 'IA al hacer una pausa', checked: App.prefs.autoAI === true, keep: true, onClick: () => { App.prefs.autoAI = !(App.prefs.autoAI === true); App.savePrefs(); } }
         : { label: 'Revisar sola al hacer una pausa', checked: !!App.prefs.auto, keep: true, onClick: () => { App.prefs.auto = !App.prefs.auto; App.savePrefs(); App.toast(App.prefs.auto ? 'Revisión automática activada.' : 'Revisión automática desactivada.'); } },
+      { label: 'Contestar cuando respondes una nota', checked: App.prefs.replyAI !== false, keep: true, onClick: () => { App.prefs.replyAI = App.prefs.replyAI === false; App.savePrefs(); } },
       RT.web ? { label: 'Configurar IA…', onClick: () => AI.open() } : null
     ]), { alignLeft: false });
   },
@@ -742,13 +743,15 @@ const Editor = {
     }
     el.append(h('p', { class: 'ntext' + (m.note ? '' : ' blank'), text: m.note || (m.by === 'claude' ? '' : 'Sin nota. Edítala para agregar un comentario.') }));
     if (m.fix && m.fix.to) el.append(h('p', { class: 'fix' }, m.fix.applied ? 'Aplicado: ' : 'Propuesta: ', m.fix.applied ? h('ins', { text: m.fix.to }) : [h('del', { text: m.fix.from }), ' → ', h('ins', { text: m.fix.to })]));
-    if (m.replies && m.replies.length) {
+    const talking = Review.live.has(m.id);
+    if ((m.replies && m.replies.length) || talking) {
       const reps = h('div', { class: 'reps' });
-      m.replies.forEach(r => reps.append(h('div', { class: 'rep-i' }, h('b', { text: this.author(r.by) + ': ' }), r.text)));
+      (m.replies || []).forEach(r => reps.append(h('div', { class: 'rep-i' + (r.by === 'claude' ? ' ai' : '') }, h('b', { text: this.author(r.by) + ': ' }), r.text)));
+      if (talking) reps.append(h('div', { class: 'rep-i ai rep-live', dataset: { id: m.id }, 'aria-live': 'polite' }, h('b', { text: this.author('claude') + ': ' }), h('span', { text: Review.live.get(m.id) || 'pensando…' })));
       el.append(reps);
     }
     if (this.replyTo === m.id && RT.canWrite) {
-      const ta = h('textarea', { 'data-k': 'r-' + m.id, 'aria-label': 'Respuesta', placeholder: 'Responde…' });
+      const ta = h('textarea', { 'data-k': 'r-' + m.id, 'aria-label': 'Respuesta', placeholder: Review.canTalk(m) ? 'Responde o pregunta; ' + AI.name() + ' te contesta aquí…' : 'Responde…' });
       ta.value = this.noteDraft['r-' + m.id] || '';
       el.append(ta, h('div', { class: 'nacts', style: 'display:flex' }, this.act('Responder', 'send-reply', m.id, 'primary'), this.act('Cancelar', 'cancel-reply', m.id)));
       return el;
@@ -915,6 +918,7 @@ const Editor = {
       const v = (this.noteDraft['r-' + id] || '').trim();
       if (v) this.mutateMark(id, p => { const x = p.segs.find(s => s.m && s.m.id === id).m; x.replies = x.replies || []; x.replies.push({ id: uid('r'), by: RT.me || 'local', text: v, at: Date.now() }); });
       this.replyTo = null; delete this.noteDraft['r-' + id];
+      if (v && Review.canTalk(m)) Review.answer(this.cid, id);
     } else if (a === 'thread') {
       App.proj().update(x => { x.threads = x.threads || []; x.threads.push({ id: uid('t'), title: (m.note || m.text).slice(0, 90), body: '«' + m.text + '» (' + App.chTitle(this.cid) + ')', status: 'open', markId: id, cid: this.cid, at: Date.now() }); }, { now: true });
       App.toast('Quedó como cabo suelto en la biblia.', { action: { label: 'Ver', fn: () => App.go('p-' + App.pid + '-biblia') } });

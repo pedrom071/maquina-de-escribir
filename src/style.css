@@ -255,6 +255,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rep-i{font-size:.7812rem}
 .rep-i b{font-weight:600}
 .note:not(.active) .reps .rep-i:not(:last-child){display:none}
+.rep-i.ai{padding-left:.55rem;border-left:2px solid var(--line)}
+.rep-live span{white-space:pre-wrap}
+.rep-live b::after{content:'';display:inline-block;width:.35rem;height:.35rem;margin:0 .3rem .1rem 0;border-radius:50%;background:currentColor;opacity:.5;animation:repPulse 1s ease-in-out infinite}
+@keyframes repPulse{50%{opacity:.1}}
+@media (prefers-reduced-motion:reduce){.rep-live b::after{animation:none}}
 .nacts{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.55rem}
 .note:not(.active) .nacts{display:none}
 .act{font:500 .7188rem/1 var(--f-ui);padding:.4rem .55rem;border-radius:5px;border:1px solid var(--line2);background:var(--sheet);color:var(--ink);cursor:pointer;white-space:nowrap}

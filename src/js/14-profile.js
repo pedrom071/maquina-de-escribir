@@ -141,9 +141,9 @@ const Profile = {
 
   reviewSection(sec) {
     const chk = (key, label, def) => { const c = h('input', { type: 'checkbox', checked: def ? App.prefs[key] !== false : App.prefs[key] === true }); c.addEventListener('change', () => { App.prefs[key] = c.checked; App.savePrefs(); this.persist(); }); return h('label', { class: 'row', style: 'font-size:.9rem' }, c, h('span', { text: label })); };
-    if (!RT.web) return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('auto', 'Revisar con Claude al hacer una pausa', true));
+    if (!RT.web) return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('auto', 'Revisar con Claude al hacer una pausa', true), chk('replyAI', 'Claude contesta cuando respondes una nota', true));
     const st = h('p', { class: 'muted', style: 'margin:0;font-size:.85rem', text: AI.ready() ? 'IA configurada: ' + (AI.cfg().provider === 'anthropic' ? 'Anthropic' : AI.cfg().provider === 'openai' ? 'OpenAI' : 'servicio compatible') + ' · ' + AI.cfg().model + '.' : 'Sin IA configurada. La revisión rápida funciona igual.' });
-    return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('autoAI', 'Revisión con IA al hacer una pausa (usa tu clave)', false), h('div', { class: 'row' }, st, btn(AI.ready() ? 'Cambiar IA' : 'Configurar IA', () => AI.open(), 'small')));
+    return sec('Revisor', chk('autoLocal', 'Revisión rápida (sin IA) mientras escribo', true), chk('autoAI', 'Revisión con IA al hacer una pausa (usa tu clave)', false), chk('replyAI', 'La IA contesta cuando respondes una nota', true), h('div', { class: 'row' }, st, btn(AI.ready() ? 'Cambiar IA' : 'Configurar IA', () => AI.open(), 'small')));
   },
   dataSection(sec) {
     const file = h('input', { type: 'file', accept: '.json', class: 'sr', id: 'restore-all' });
