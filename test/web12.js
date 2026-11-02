@@ -23,8 +23,15 @@ let fails = 0; const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FALLA ') + m
   await sleep(300);
   ok(await pg.evaluate(() => !!document.querySelector('#idea-fab .fab-main')), 'botón flotante «Idea» en el editor');
   await pg.keyboard.press('Control+Period'); await sleep(300);
-  ok(await pg.evaluate(() => { const f = document.querySelector('#idea-fab'); return !f || getComputedStyle(f).display === 'none'; }), 'se oculta en el modo foco');
+  ok(await pg.evaluate(() => { const f = document.querySelector('#idea-fab'); return f && f.classList.contains('subtle') && +getComputedStyle(f).opacity < 0.5; }), 'en el modo foco queda discreto');
   await pg.keyboard.press('Escape'); await sleep(200);
+  await pg.keyboard.press('Control+Shift+Period'); await sleep(300);
+  ok(await pg.evaluate(() => document.body.classList.contains('ultra') && +getComputedStyle(document.querySelector('#idea-fab')).opacity < 0.2), 'en ultra foco el botón de ideas sigue ahí, casi invisible');
+  await pg.evaluate(() => document.querySelector('#idea-fab .fab-main').click()); await sleep(300);
+  await pg.keyboard.type('Idea en pleno ultra foco'); await pg.keyboard.press('Control+Enter'); await sleep(400);
+  ok(await pg.evaluate(() => Ideas.list().some(x => /pleno ultra/.test(x.text)) && document.body.classList.contains('ultra')), 'anotar una idea sin salir del ultra foco');
+  await pg.evaluate(() => { const x = Ideas.list().find(z => /pleno ultra/.test(z.text)); Ideas.update(x.id, z => { z.deleted = true; }); });
+  await pg.keyboard.press('Escape'); await sleep(300);
   await pg.evaluate(() => document.querySelector('#idea-fab .fab-main').click()); await sleep(300);
   await pg.keyboard.type('Marta encuentra una foto vieja entre las redes del muelle'); await pg.keyboard.press('Control+Enter'); await sleep(400);
   await pg.evaluate(() => { Ideas.add({ text: 'Los ascensores del cerro chirrían como gatos' }); Ideas.add({ text: 'Algo sobre la lluvia' }); }); await sleep(400);

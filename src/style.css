@@ -812,7 +812,14 @@ body.ultra .doc.dim p:not(.cur){opacity:.55}
 .idea-fab .fab-main:hover{transform:translateY(-1px)}
 .idea-fab .fab-all{margin-left:-.6rem;border:2px solid var(--bg);background:var(--sheet);color:var(--accent);border-radius:999px;min-width:2rem;height:2rem;padding:0 .45rem;cursor:pointer;font:700 .75rem var(--f-mono)}
 .idea-fab .fab-all[hidden]{display:none}
-body.focus .idea-fab,body.reading .idea-fab,body.has-drawer .idea-fab{display:none}
+body.reading .idea-fab,body.has-drawer .idea-fab{display:none}
+.idea-fab.subtle{opacity:.22;filter:none;transition:opacity .25s}
+.idea-fab.subtle:hover,.idea-fab.subtle:focus-within{opacity:.95}
+.idea-fab.subtle .fab-main{background:none;color:var(--soft);border:1px solid var(--line2);padding:.55rem}
+.idea-fab.subtle .fab-main .lbl{display:none}
+.idea-fab.subtle .fab-main:hover{color:var(--accent);border-color:var(--accent)}
+body.ultra .idea-fab.subtle{opacity:.12}
+body.ultra .idea-fab.subtle:hover{opacity:.9}
 @media (max-width:640px){.idea-fab .fab-main .lbl{display:none}.idea-fab .fab-main{padding:.7rem}}
 .nav-n{margin-left:auto;font:600 .66rem var(--f-mono);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:.1rem .45rem}
 .idea-sug{display:flex;align-items:center;gap:.35rem;margin-top:.55rem;padding:.4rem .5rem;border-radius:5px;background:var(--accent-soft);font-size:.78rem;line-height:1.35}

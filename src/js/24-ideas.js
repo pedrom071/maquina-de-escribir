@@ -292,7 +292,8 @@ const Ideas = {
   /* ---------- botón flotante (en el editor y demás vistas del proyecto) ---------- */
   fab() {
     let b = $('#idea-fab');
-    const show = App.view === 'project' && RT.canWrite && !App.focus;
+    // en foco y ultra foco se queda, pero discreto (solo el ícono, casi transparente)
+    const show = App.view === 'project' && RT.canWrite;
     if (!show) { if (b) b.remove(); return; }
     const n = this.coll ? this.list().filter(x => !x.done && !x.cid).length : 0;
     if (!b) {
@@ -301,7 +302,8 @@ const Ideas = {
         h('button', { type: 'button', class: 'fab-all', title: 'Ver todas las ideas', onclick: () => App.go('p-' + App.pid + '-ideas') }, h('b')));
       document.body.append(b);
     }
-    const all = b.querySelector('.fab-all'); all.hidden = !n || App.tab === 'ideas';
+    b.classList.toggle('subtle', !!App.focus);
+    const all = b.querySelector('.fab-all'); all.hidden = !n || App.tab === 'ideas' || !!App.focus;
     all.querySelector('b').textContent = n > 99 ? '99+' : String(n);
     all.title = plural(n, 'idea sin lugar', 'ideas sin lugar') + ' · ver todas';
   },
